@@ -1,13 +1,27 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { db } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { doc, getDoc, updateDoc, increment, setDoc, serverTimestamp } from 'firebase/firestore';
 import { Users } from 'lucide-react';
 import { motion } from 'motion/react';
 
 export default function AccessCounter() {
   const [count, setCount] = useState<number | null>(null);
+
+  const handleFirestoreError = (error: any, operation: string, path: string) => {
+    const errInfo = {
+      error: error?.message || String(error),
+      operationType: operation,
+      path: path,
+      authInfo: {
+        userId: auth.currentUser?.uid,
+        email: auth.currentUser?.email,
+        emailVerified: auth.currentUser?.emailVerified,
+      }
+    };
+    console.error('Firestore Error:', JSON.stringify(errInfo));
+  };
 
   useEffect(() => {
     const trackAccess = async () => {
@@ -38,7 +52,7 @@ export default function AccessCounter() {
           }
         }
       } catch (error) {
-        console.error('Error tracking access:', error);
+        handleFirestoreError(error, 'write', 'stats/global');
       }
     };
 

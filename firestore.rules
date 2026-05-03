@@ -37,7 +37,7 @@ service cloud.firestore {
       
       // Allow heartbeat updates
       allow create, update: if 
-        sessionId.size() >= 20 &&
+        sessionId.size() >= 10 && sessionId.size() <= 128 &&
         incoming().lastSeen == request.time &&
         incoming().keys().hasOnly(['lastSeen']);
       

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { db } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { 
   collection, 
   doc, 
@@ -29,6 +29,20 @@ export default function OnlineCounter() {
 
     const presenceRef = doc(db, 'presence', sessionId);
 
+    const handleFirestoreError = (error: any, operation: string, path: string) => {
+      const errInfo = {
+        error: error?.message || String(error),
+        operationType: operation,
+        path: path,
+        authInfo: {
+          userId: auth.currentUser?.uid,
+          email: auth.currentUser?.email,
+          emailVerified: auth.currentUser?.emailVerified,
+        }
+      };
+      console.error('Firestore Error:', JSON.stringify(errInfo));
+    };
+
     // Initial heartbeat
     const updatePresence = async () => {
       try {
@@ -36,7 +50,7 @@ export default function OnlineCounter() {
           lastSeen: serverTimestamp()
         });
       } catch (err) {
-        console.error('Presence update failed:', err);
+        handleFirestoreError(err, 'write', `presence/${sessionId}`);
       }
     };
 
@@ -47,12 +61,13 @@ export default function OnlineCounter() {
 
     // Clean up on window close if possible (best effort)
     const handleUnload = () => {
-      deleteDoc(presenceRef).catch(() => {});
+      deleteDoc(presenceRef).catch((err) => {
+        handleFirestoreError(err, 'delete', `presence/${sessionId}`);
+      });
     };
     window.addEventListener('beforeunload', handleUnload);
 
     // Listen to online users (last 2 minutes)
-    // We update every minute to refresh the threshold
     let unsubscribeSnapshot: () => void;
 
     const startListening = () => {
@@ -65,8 +80,9 @@ export default function OnlineCounter() {
       );
 
       unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
-        // Minimum 1 user (the current one)
         setOnlineCount(Math.max(1, snapshot.size));
+      }, (error) => {
+        handleFirestoreError(error, 'list', 'presence');
       });
     };
 

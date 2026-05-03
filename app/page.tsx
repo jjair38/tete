@@ -23,6 +23,7 @@ import Image from 'next/image';
 import AdBanner from '@/components/AdBanner';
 import AccessCounter from '@/components/AccessCounter';
 import OnlineCounter from '@/components/OnlineCounter';
+import WhatsAppButton from '@/components/WhatsAppButton';
 
 interface VideoFormat {
   quality: string;
@@ -455,6 +456,7 @@ export default function Home() {
            <div className="normal-case opacity-60">Tenha seu próprio site / APP &bull; Entre em contato: 11-91692-2835</div>
         </footer>
       </div>
+      <WhatsAppButton />
     </main>
   );
 }
