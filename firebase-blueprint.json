@@ -16,12 +16,29 @@
         }
       },
       "required": ["accessCount"]
+    },
+    "Presence": {
+      "title": "Presence",
+      "description": "Real-time user session status",
+      "type": "object",
+      "properties": {
+        "lastSeen": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last time the user's session was active"
+        }
+      },
+      "required": ["lastSeen"]
     }
   },
   "firestore": {
     "/stats/global": {
       "schema": "Stats",
       "description": "Global statistics document"
+    },
+    "/presence/{sessionId}": {
+      "schema": "Presence",
+      "description": "User session presence document"
     }
   }
 }

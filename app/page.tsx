@@ -22,6 +22,7 @@ import {
 import Image from 'next/image';
 import AdBanner from '@/components/AdBanner';
 import AccessCounter from '@/components/AccessCounter';
+import OnlineCounter from '@/components/OnlineCounter';
 
 interface VideoFormat {
   quality: string;
@@ -156,7 +157,10 @@ export default function Home() {
               <span className="w-2 h-2 rounded-full bg-[#fe2c55] animate-pulse" />
               <span className="text-xs font-medium tracking-wider uppercase text-white/70">Downloader Online</span>
             </div>
-            <AccessCounter />
+            <div className="flex flex-wrap justify-center gap-3">
+              <AccessCounter />
+              <OnlineCounter />
+            </div>
           </motion.div>
           
           <motion.h1
@@ -446,8 +450,9 @@ export default function Home() {
           </div>
         </section>
 
-        <footer className="mt-16 pt-8 border-t border-white/5 text-center text-white/20 text-xs font-bold uppercase tracking-widest">
-           &copy; {new Date().getFullYear()} Social Save Downloader &bull; Made with 🤍
+        <footer className="mt-16 pt-8 border-t border-white/5 text-center text-white/20 text-xs font-bold uppercase tracking-widest flex flex-col gap-2">
+           <div>&copy; {new Date().getFullYear()} Social Save Downloader</div>
+           <div className="normal-case opacity-60">Tenha seu próprio site / APP &bull; Entre em contato: 11-91692-2835</div>
         </footer>
       </div>
     </main>

@@ -30,5 +30,19 @@ service cloud.firestore {
         incoming().accessCount == 1
       );
     }
+
+    match /presence/{sessionId} {
+      // Allow everyone to read so they can count online users
+      allow read: if true;
+      
+      // Allow heartbeat updates
+      allow create, update: if 
+        sessionId.size() >= 20 &&
+        incoming().lastSeen == request.time &&
+        incoming().keys().hasOnly(['lastSeen']);
+      
+      // Allow session cleanup
+      allow delete: if true;
+    }
   }
 }
