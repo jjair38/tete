@@ -2,7 +2,23 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, Download, Video, Music, User, Eye, Heart, MessageCircle, Share2, AlertCircle, Loader2 } from 'lucide-react';
+import { 
+  Download, 
+  Search, 
+  Loader2, 
+  Video, 
+  Music, 
+  Eye, 
+  Heart, 
+  MessageCircle, 
+  Share2, 
+  User, 
+  ShieldCheck, 
+  Zap, 
+  Smartphone, 
+  AlertCircle,
+  ExternalLink
+} from 'lucide-react';
 import Image from 'next/image';
 
 interface DownloadData {
@@ -30,6 +46,8 @@ export default function TikTokDownloader() {
   const [error, setError] = useState<string | null>(null);
   const [videoData, setVideoData] = useState<DownloadData | null>(null);
 
+  const [downloading, setDownloading] = useState<string | null>(null);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!url.trim()) return;
@@ -37,6 +55,7 @@ export default function TikTokDownloader() {
     setLoading(true);
     setError(null);
     setVideoData(null);
+    setDownloading(null);
 
     try {
       const isInstagram = url.includes('instagram.com');
@@ -62,13 +81,12 @@ export default function TikTokDownloader() {
     }
   };
 
-  const handleDownload = async (mediaUrl: string, filename: string) => {
+  const handleDownload = async (mediaUrl: string, filename: string, type: string) => {
     if (!mediaUrl) return;
-    setLoading(true);
+    setDownloading(type);
     setError(null);
     
     try {
-      // Para arquivos grandes ou streaming, o redirect controlado por link é mais estável
       const proxyUrl = `/api/download?url=${encodeURIComponent(mediaUrl)}&filename=${encodeURIComponent(filename)}`;
       
       const link = document.createElement('a');
@@ -78,14 +96,16 @@ export default function TikTokDownloader() {
       link.click();
       document.body.removeChild(link);
       
-      // Feedback visual breve
-      setTimeout(() => setLoading(false), 2000);
-      
+      setTimeout(() => setDownloading(null), 3000);
     } catch (err: any) {
       console.error('Erro ao baixar:', err);
-      setError(err.message || 'Não foi possível baixar o arquivo. O link original pode ter expirado.');
-      setLoading(false);
+      setError('Problema no proxy. Tente usar o botão de "Abrir Original" ao lado.');
+      setDownloading(null);
     }
+  };
+
+  const openDirectly = (url: string) => {
+    window.open(url, '_blank');
   };
 
   return (
@@ -253,45 +273,74 @@ export default function TikTokDownloader() {
                     </div>
                     Opções de Download
                   </h3>
-                  
-                  <div className="space-y-4">
+                              <div className="space-y-4">
                     {videoData.videoHd && (
-                      <button
-                        onClick={() => handleDownload(videoData.videoHd!, `${videoData.platform}_hd_${Date.now()}.mp4`)}
-                        className="w-full py-4 px-6 rounded-2xl bg-white text-black font-bold flex items-center justify-between hover:bg-[#25f4ee] hover:text-black transition-all active:scale-[0.98] group"
-                      >
-                        <div className="flex items-center gap-3">
-                          <Video className="w-5 h-5 group-hover:animate-bounce" />
-                          <span>Baixar Vídeo HD</span>
-                        </div>
-                        <span className="text-[10px] uppercase tracking-widest opacity-50">Melhor Qualidade</span>
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          disabled={!!downloading}
+                          onClick={() => handleDownload(videoData.videoHd!, `${videoData.platform}_hd_${Date.now()}.mp4`, 'hd')}
+                          className="flex-1 py-4 px-6 rounded-2xl bg-white text-black font-bold flex items-center justify-between hover:bg-[#25f4ee] hover:text-black transition-all active:scale-[0.98] disabled:opacity-50 group"
+                        >
+                          <div className="flex items-center gap-3">
+                            {downloading === 'hd' ? <Loader2 className="w-5 h-5 animate-spin" /> : <Video className="w-5 h-5 group-hover:animate-bounce" />}
+                            <span>Baixar HD</span>
+                          </div>
+                          <span className="text-[10px] uppercase tracking-widest opacity-50 hidden sm:inline">Melhor</span>
+                        </button>
+                        <button 
+                          onClick={() => openDirectly(videoData.videoHd!)}
+                          title="Abrir link original"
+                          className="px-4 rounded-2xl bg-white/10 hover:bg-white/20 transition-all active:scale-95"
+                        >
+                          <ExternalLink className="w-5 h-5 text-white/60" />
+                        </button>
+                      </div>
                     )}
                     
                     {videoData.video && (
-                      <button
-                        onClick={() => handleDownload(videoData.video, `${videoData.platform}_${Date.now()}.mp4`)}
-                        className="w-full py-4 px-6 rounded-2xl bg-white/5 border border-white/10 text-white font-bold flex items-center justify-between hover:bg-white/10 transition-all active:scale-[0.98] group"
-                      >
-                        <div className="flex items-center gap-3">
-                          <Download className="w-5 h-5 group-hover:translate-y-1 transition-transform" />
-                          <span>{videoData.videoHd ? 'Download Padrão' : 'Baixar Vídeo'}</span>
-                        </div>
-                        <span className="text-[10px] uppercase tracking-widest opacity-30">Rápido</span>
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          disabled={!!downloading}
+                          onClick={() => handleDownload(videoData.video, `${videoData.platform}_${Date.now()}.mp4`, 'sd')}
+                          className="flex-1 py-4 px-6 rounded-2xl bg-white/5 border border-white/10 text-white font-bold flex items-center justify-between hover:bg-white/10 transition-all active:scale-[0.98] disabled:opacity-50 group"
+                        >
+                          <div className="flex items-center gap-3">
+                            {downloading === 'sd' ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5 group-hover:translate-y-1 transition-transform" />}
+                            <span>{videoData.videoHd ? 'Download Padrão' : 'Baixar Vídeo'}</span>
+                          </div>
+                          <span className="text-[10px] uppercase tracking-widest opacity-30 hidden sm:inline">Normal</span>
+                        </button>
+                        <button 
+                          onClick={() => openDirectly(videoData.video)}
+                          title="Abrir link original"
+                          className="px-4 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all active:scale-95"
+                        >
+                          <ExternalLink className="w-5 h-5 text-white/30" />
+                        </button>
+                      </div>
                     )}
 
                     {videoData.music && (
-                      <button
-                        onClick={() => handleDownload(videoData.music!, `music_${Date.now()}.mp3`)}
-                        className="w-full py-4 px-6 rounded-2xl bg-white/5 border border-white/10 text-white font-bold flex items-center justify-between hover:bg-white/10 transition-all active:scale-[0.98] group"
-                      >
-                        <div className="flex items-center gap-3">
-                          <Music className="w-5 h-5 group-hover:rotate-12 transition-transform" />
-                          <span>Baixar Música MP3</span>
-                        </div>
-                        <span className="text-[10px] uppercase tracking-widest opacity-30">Somente Áudio</span>
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          disabled={!!downloading}
+                          onClick={() => handleDownload(videoData.music!, `music_${Date.now()}.mp3`, 'mp3')}
+                          className="flex-1 py-4 px-6 rounded-2xl bg-white/5 border border-white/10 text-white font-bold flex items-center justify-between hover:bg-white/10 transition-all active:scale-[0.98] disabled:opacity-50 group"
+                        >
+                          <div className="flex items-center gap-3">
+                            {downloading === 'mp3' ? <Loader2 className="w-5 h-5 animate-spin" /> : <Music className="w-5 h-5 group-hover:rotate-12 transition-transform" />}
+                            <span>Baixar MP3</span>
+                          </div>
+                          <span className="text-[10px] uppercase tracking-widest opacity-30 hidden sm:inline">Áudio</span>
+                        </button>
+                        <button 
+                          onClick={() => openDirectly(videoData.music!)}
+                          title="Abrir link original"
+                          className="px-4 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all active:scale-95"
+                        >
+                          <ExternalLink className="w-5 h-5 text-white/30" />
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>

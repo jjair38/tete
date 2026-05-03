@@ -10,13 +10,21 @@ export async function GET(request: Request) {
   }
 
   try {
+    const isTiktok = url.includes('tiktok') || url.includes('ttwstatic') || url.includes('muscdn');
+    const headers = new Headers({
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+      'Accept': '*/*',
+    });
+
+    if (isTiktok) {
+      headers.set('Referer', 'https://www.tiktok.com/');
+    } else if (url.includes('instagram') || url.includes('fbcdn')) {
+      headers.set('Referer', 'https://www.instagram.com/');
+    }
+
     const response = await fetch(url, {
       method: 'GET',
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-        'Accept': '*/*',
-        'Referer': 'https://www.tiktok.com/',
-      },
+      headers,
     });
 
     if (!response.ok) {
@@ -41,15 +49,15 @@ export async function GET(request: Request) {
       throw new Error('Corpo da resposta vazio');
     }
 
-    const headers = new Headers();
-    headers.set('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
-    headers.set('Content-Type', contentType);
-    if (contentLength) headers.set('Content-Length', contentLength);
-    headers.set('Cache-Control', 'no-store');
+    const resHeaders = new Headers();
+    resHeaders.set('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
+    resHeaders.set('Content-Type', contentType);
+    if (contentLength) resHeaders.set('Content-Length', contentLength);
+    resHeaders.set('Cache-Control', 'no-store');
 
     return new NextResponse(body, {
       status: 200,
-      headers,
+      headers: resHeaders,
     });
   } catch (error: any) {
     console.error('Erro no download proxy:', error);
