@@ -34,26 +34,20 @@ export async function GET(request: Request) {
     const contentType = response.headers.get('content-type') || 'application/octet-stream';
     const contentLength = response.headers.get('content-length');
 
-    // Se o conteúdo for muito pequeno (ex: uma página de erro HTML de 500 bytes), avisamos
-    // Vídeos raramente têm menos de 10KB
-    const buffer = await response.arrayBuffer();
-    if (buffer.byteLength < 1000 && contentType.includes('text')) {
-      return new NextResponse(JSON.stringify({ 
-        error: 'O link gerado não é um arquivo de mídia válido',
-        details: new TextDecoder().decode(buffer).substring(0, 100)
-      }), {
-        status: 415,
-        headers: { 'Content-Type': 'application/json' }
-      });
+    // Usar streaming em vez de arrayBuffer para evitar estouro de memória e timeout
+    const body = response.body;
+
+    if (!body) {
+      throw new Error('Corpo da resposta vazio');
     }
 
     const headers = new Headers();
     headers.set('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
     headers.set('Content-Type', contentType);
-    if (contentLength) headers.set('Content-Length', buffer.byteLength.toString());
-    headers.set('Cache-Control', 'no-store'); // Evitar cache de links expirados
+    if (contentLength) headers.set('Content-Length', contentLength);
+    headers.set('Cache-Control', 'no-store');
 
-    return new NextResponse(buffer, {
+    return new NextResponse(body, {
       status: 200,
       headers,
     });
