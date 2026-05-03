@@ -20,6 +20,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 import Image from 'next/image';
+import AdBanner from '@/components/AdBanner';
 
 interface DownloadData {
   title: string;
@@ -148,9 +149,10 @@ export default function SocialDownloader() {
         </header>
 
         {/* Top Ad Space */}
-        <div className="mb-8 w-full h-[60px] md:h-[90px] bg-white/5 border border-dashed border-white/10 rounded-xl flex items-center justify-center text-[10px] uppercase tracking-widest text-white/20 italic">
-          Espaço Publicitário
-        </div>
+        <AdBanner 
+          adSlot={process.env.NEXT_PUBLIC_ADSENSE_SLOT_TOP || ""} 
+          className="mb-8 min-h-[90px]"
+        />
 
         {/* Search Input */}
         <motion.div
@@ -389,12 +391,12 @@ export default function SocialDownloader() {
         </AnimatePresence>
 
         {/* Google Ads Placement */}
-        <section className="mt-12 bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col items-center justify-center min-h-[150px]">
+        <section className="mt-12 bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col items-center justify-center">
           <span className="text-[10px] uppercase tracking-widest text-white/30 mb-2">Publicidade</span>
-          {/* Espaço para o código do Google AdSense */}
-          <div className="w-full h-[90px] bg-white/5 border border-dashed border-white/10 rounded-lg flex items-center justify-center text-white/20 text-sm italic">
-            Seu anúncio aqui
-          </div>
+          <AdBanner 
+            adSlot={process.env.NEXT_PUBLIC_ADSENSE_SLOT_BOTTOM || ""} 
+            className="w-full min-h-[90px]"
+          />
         </section>
 
         {/* Footer */}

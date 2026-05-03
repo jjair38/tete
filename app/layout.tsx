@@ -1,4 +1,5 @@
 import type {Metadata} from 'next';
+import Script from 'next/script';
 import './globals.css'; // Global styles
 
 export const metadata: Metadata = {
@@ -7,8 +8,18 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({children}: {children: React.ReactNode}) {
+  const publisherId = "ca-pub-3630961061648944";
+
   return (
-    <html lang="en">
+    <html lang="pt-BR">
+      <head>
+        <Script
+          async
+          src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${publisherId}`}
+          crossOrigin="anonymous"
+          strategy="afterInteractive"
+        />
+      </head>
       <body suppressHydrationWarning>{children}</body>
     </html>
   );
