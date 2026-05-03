@@ -14,12 +14,11 @@ export default function RootLayout({children}: {children: React.ReactNode}) {
     <html lang="pt-BR">
       <head>
         <meta name="google-adsense-account" content="ca-pub-3630961061648944" />
-        <Script
+        <script
           async
           src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${publisherId}`}
           crossOrigin="anonymous"
-          strategy="afterInteractive"
-        />
+        ></script>
       </head>
       <body suppressHydrationWarning>{children}</body>
     </html>

@@ -117,9 +117,9 @@ export default function SocialDownloader() {
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-[#25f4ee]/10 blur-[120px]" />
       </div>
 
-      <div className="relative z-10 max-w-4xl mx-auto px-6 py-12 md:py-24">
+      <div className="relative z-10 max-w-4xl mx-auto px-6 py-8 md:py-16">
         {/* Header */}
-        <header className="text-center mb-12">
+        <header className="text-center mb-8">
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -151,7 +151,7 @@ export default function SocialDownloader() {
         {/* Top Ad Space */}
         <AdBanner 
           adSlot={process.env.NEXT_PUBLIC_ADSENSE_SLOT_TOP || ""} 
-          className="mb-8 min-h-[90px]"
+          className="mb-6 min-h-[60px]"
         />
 
         {/* Search Input */}
