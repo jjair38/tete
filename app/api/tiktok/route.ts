@@ -36,16 +36,23 @@ export async function POST(request: Request) {
       );
     }
 
+    const baseUrl = 'https://www.tikwm.com';
+    const ensureAbsolute = (path: string) => {
+      if (!path) return '';
+      if (path.startsWith('http')) return path;
+      return path.startsWith('/') ? `${baseUrl}${path}` : `${baseUrl}/${path}`;
+    };
+
     // Extracting needed data
     const result = {
       title: data.data.title,
-      cover: data.data.cover,
-      video: data.data.play, // Normal quality
-      videoHd: data.data.hdplay, // HD quality
-      music: data.data.music,
+      cover: ensureAbsolute(data.data.cover),
+      video: ensureAbsolute(data.data.play), // Normal quality
+      videoHd: ensureAbsolute(data.data.hdplay), // HD quality
+      music: ensureAbsolute(data.data.music),
       author: {
         name: data.data.author.nickname,
-        avatar: data.data.author.avatar,
+        avatar: ensureAbsolute(data.data.author.avatar),
       },
       stats: {
         plays: data.data.play_count,

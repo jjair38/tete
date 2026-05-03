@@ -10,6 +10,16 @@ export async function GET(request: Request) {
   }
 
   try {
+    // Validate URL format
+    try {
+      new URL(url);
+    } catch (e) {
+      return NextResponse.json({ 
+        error: 'URL de mídia inválida', 
+        message: 'A URL fornecida não tem um formato válido.' 
+      }, { status: 400 });
+    }
+
     const isTiktok = url.includes('tiktok') || url.includes('ttwstatic') || url.includes('muscdn');
     const headers = new Headers({
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
