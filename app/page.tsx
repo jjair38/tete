@@ -5,21 +5,22 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Search, Download, Video, Music, User, Eye, Heart, MessageCircle, Share2, AlertCircle, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 
-interface TikTokData {
+interface DownloadData {
   title: string;
   cover: string;
   video: string;
-  videoHd: string;
-  music: string;
+  videoHd?: string;
+  music?: string;
+  platform: 'tiktok' | 'instagram';
   author: {
     name: string;
     avatar: string;
   };
-  stats: {
-    plays: number;
-    digg: number;
-    comments: number;
-    share: number;
+  stats?: {
+    plays?: number;
+    digg?: number;
+    comments?: number;
+    share?: number;
   };
 }
 
@@ -27,7 +28,7 @@ export default function TikTokDownloader() {
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [videoData, setVideoData] = useState<TikTokData | null>(null);
+  const [videoData, setVideoData] = useState<DownloadData | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +39,10 @@ export default function TikTokDownloader() {
     setVideoData(null);
 
     try {
-      const response = await fetch('/api/tiktok', {
+      const isInstagram = url.includes('instagram.com');
+      const apiEndpoint = isInstagram ? '/api/instagram' : '/api/tiktok';
+
+      const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url }),
@@ -50,7 +54,7 @@ export default function TikTokDownloader() {
         throw new Error(data.error || 'Falha ao buscar vídeo');
       }
 
-      setVideoData(data);
+      setVideoData({ ...data, platform: isInstagram ? 'instagram' : 'tiktok' });
     } catch (err: any) {
       setError(err.message || 'Algo deu errado');
     } finally {
@@ -58,13 +62,12 @@ export default function TikTokDownloader() {
     }
   };
 
-  const handleDownload = async (videoUrl: string, filename: string) => {
+  const handleDownload = async (mediaUrl: string, filename: string) => {
+    if (!mediaUrl) return;
     try {
-      // Show loading indicator or feedback if possible
-      // Using window.location.href for the proxy download
-      const proxyUrl = `/api/download?url=${encodeURIComponent(videoUrl)}&filename=${encodeURIComponent(filename)}`;
+      // Usar o nosso proxy de download para garantir integridade e evitar bloqueios de CORS/Hotlinking
+      const proxyUrl = `/api/download?url=${encodeURIComponent(mediaUrl)}&filename=${encodeURIComponent(filename)}`;
       
-      // Create a temporary link to trigger download
       const link = document.createElement('a');
       link.href = proxyUrl;
       link.setAttribute('download', filename);
@@ -72,7 +75,7 @@ export default function TikTokDownloader() {
       link.click();
       document.body.removeChild(link);
     } catch (err) {
-      console.error('Download trigger error:', err);
+      console.error('Erro ao iniciar download:', err);
       setError('Não foi possível iniciar o download. Tente novamente.');
     }
   };
@@ -103,7 +106,7 @@ export default function TikTokDownloader() {
             transition={{ delay: 0.1 }}
             className="text-4xl md:text-6xl font-black tracking-tighter mb-4"
           >
-            DOWNLOADER DE <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#fe2c55] via-[#25f4ee] to-[#fe2c55] bg-[length:200%_auto] animate-gradient">TIKTOK</span>
+            SOCIAL <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#fe2c55] via-[#25f4ee] to-[#fe2c55] bg-[length:200%_auto] animate-gradient">DOWNLOADER</span>
           </motion.h1>
           
           <motion.p
@@ -112,7 +115,7 @@ export default function TikTokDownloader() {
             transition={{ delay: 0.2 }}
             className="text-white/50 text-lg md:text-xl max-w-xl mx-auto"
           >
-            Baixe vídeos sem marca d'água em alta qualidade de forma rápida e gratuita.
+            Baixe vídeos do TikTok e Instagram sem marca d'água em alta qualidade.
           </motion.p>
         </header>
 
@@ -131,7 +134,7 @@ export default function TikTokDownloader() {
               type="text"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
-              placeholder="Cole o link do vídeo do TikTok aqui..."
+              placeholder="Cole o link do TikTok ou Instagram aqui..."
               className="w-full bg-white/5 border border-white/10 rounded-2xl py-6 pl-14 pr-36 text-white text-lg placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-[#fe2c55]/50 focus:border-[#fe2c55]/50 transition-all shadow-2xl shadow-black"
             />
             <button
@@ -198,22 +201,36 @@ export default function TikTokDownloader() {
                       {videoData.title}
                     </p>
                     <div className="flex items-center justify-between text-xs font-bold text-white/80 border-t border-white/10 pt-4">
-                      <div className="flex flex-col items-center gap-1">
-                        <Eye className="w-4 h-4 text-[#25f4ee]" />
-                        <span>{videoData.stats.plays.toLocaleString()}</span>
-                      </div>
-                      <div className="flex flex-col items-center gap-1">
-                        <Heart className="w-4 h-4 text-[#fe2c55]" />
-                        <span>{videoData.stats.digg.toLocaleString()}</span>
-                      </div>
-                      <div className="flex flex-col items-center gap-1">
-                        <MessageCircle className="w-4 h-4 text-[#25f4ee]" />
-                        <span>{videoData.stats.comments.toLocaleString()}</span>
-                      </div>
-                      <div className="flex flex-col items-center gap-1">
-                        <Share2 className="w-4 h-4 text-[#fe2c55]" />
-                        <span>{videoData.stats.share.toLocaleString()}</span>
-                      </div>
+                      {videoData.stats?.plays !== undefined && (
+                        <div className="flex flex-col items-center gap-1">
+                          <Eye className="w-4 h-4 text-[#25f4ee]" />
+                          <span>{videoData.stats.plays.toLocaleString()}</span>
+                        </div>
+                      )}
+                      {videoData.stats?.digg !== undefined && (
+                        <div className="flex flex-col items-center gap-1">
+                          <Heart className="w-4 h-4 text-[#fe2c55]" />
+                          <span>{videoData.stats.digg.toLocaleString()}</span>
+                        </div>
+                      )}
+                      {videoData.stats?.comments !== undefined && (
+                        <div className="flex flex-col items-center gap-1">
+                          <MessageCircle className="w-4 h-4 text-[#25f4ee]" />
+                          <span>{videoData.stats.comments.toLocaleString()}</span>
+                        </div>
+                      )}
+                      {videoData.stats?.share !== undefined && (
+                        <div className="flex flex-col items-center gap-1">
+                          <Share2 className="w-4 h-4 text-[#fe2c55]" />
+                          <span>{videoData.stats.share.toLocaleString()}</span>
+                        </div>
+                      )}
+                      {/* Mostrar uma mensagem simples se não houver stats (comum no Instagram) */}
+                      {!videoData.stats && (
+                        <div className="flex items-center justify-center w-full py-2 opacity-50">
+                          <span className="text-[10px] uppercase tracking-widest text-[#25f4ee]">Social Media Content</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -230,38 +247,44 @@ export default function TikTokDownloader() {
                   </h3>
                   
                   <div className="space-y-4">
-                    <button
-                      onClick={() => handleDownload(videoData.videoHd, `tiktok_hd_${Date.now()}.mp4`)}
-                      className="w-full py-4 px-6 rounded-2xl bg-white text-black font-bold flex items-center justify-between hover:bg-[#25f4ee] hover:text-black transition-all active:scale-[0.98] group"
-                    >
-                      <div className="flex items-center gap-3">
-                        <Video className="w-5 h-5 group-hover:animate-bounce" />
-                        <span>Baixar Vídeo HD</span>
-                      </div>
-                      <span className="text-[10px] uppercase tracking-widest opacity-50">Melhor Qualidade</span>
-                    </button>
+                    {videoData.videoHd && (
+                      <button
+                        onClick={() => handleDownload(videoData.videoHd!, `${videoData.platform}_hd_${Date.now()}.mp4`)}
+                        className="w-full py-4 px-6 rounded-2xl bg-white text-black font-bold flex items-center justify-between hover:bg-[#25f4ee] hover:text-black transition-all active:scale-[0.98] group"
+                      >
+                        <div className="flex items-center gap-3">
+                          <Video className="w-5 h-5 group-hover:animate-bounce" />
+                          <span>Baixar Vídeo HD</span>
+                        </div>
+                        <span className="text-[10px] uppercase tracking-widest opacity-50">Melhor Qualidade</span>
+                      </button>
+                    )}
                     
-                    <button
-                      onClick={() => handleDownload(videoData.video, `tiktok_${Date.now()}.mp4`)}
-                      className="w-full py-4 px-6 rounded-2xl bg-white/5 border border-white/10 text-white font-bold flex items-center justify-between hover:bg-white/10 transition-all active:scale-[0.98] group"
-                    >
-                      <div className="flex items-center gap-3">
-                        <Download className="w-5 h-5 group-hover:translate-y-1 transition-transform" />
-                        <span>Download Padrão</span>
-                      </div>
-                      <span className="text-[10px] uppercase tracking-widest opacity-30">Rápido</span>
-                    </button>
+                    {videoData.video && (
+                      <button
+                        onClick={() => handleDownload(videoData.video, `${videoData.platform}_${Date.now()}.mp4`)}
+                        className="w-full py-4 px-6 rounded-2xl bg-white/5 border border-white/10 text-white font-bold flex items-center justify-between hover:bg-white/10 transition-all active:scale-[0.98] group"
+                      >
+                        <div className="flex items-center gap-3">
+                          <Download className="w-5 h-5 group-hover:translate-y-1 transition-transform" />
+                          <span>{videoData.videoHd ? 'Download Padrão' : 'Baixar Vídeo'}</span>
+                        </div>
+                        <span className="text-[10px] uppercase tracking-widest opacity-30">Rápido</span>
+                      </button>
+                    )}
 
-                    <button
-                      onClick={() => handleDownload(videoData.music, `music_${Date.now()}.mp3`)}
-                      className="w-full py-4 px-6 rounded-2xl bg-white/5 border border-white/10 text-white font-bold flex items-center justify-between hover:bg-white/10 transition-all active:scale-[0.98] group"
-                    >
-                      <div className="flex items-center gap-3">
-                        <Music className="w-5 h-5 group-hover:rotate-12 transition-transform" />
-                        <span>Baixar Música MP3</span>
-                      </div>
-                      <span className="text-[10px] uppercase tracking-widest opacity-30">Somente Áudio</span>
-                    </button>
+                    {videoData.music && (
+                      <button
+                        onClick={() => handleDownload(videoData.music!, `music_${Date.now()}.mp3`)}
+                        className="w-full py-4 px-6 rounded-2xl bg-white/5 border border-white/10 text-white font-bold flex items-center justify-between hover:bg-white/10 transition-all active:scale-[0.98] group"
+                      >
+                        <div className="flex items-center gap-3">
+                          <Music className="w-5 h-5 group-hover:rotate-12 transition-transform" />
+                          <span>Baixar Música MP3</span>
+                        </div>
+                        <span className="text-[10px] uppercase tracking-widest opacity-30">Somente Áudio</span>
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -298,9 +321,9 @@ export default function TikTokDownloader() {
           <p className="text-white/20 text-xs font-medium tracking-widest uppercase mb-4">Como baixar?</p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center md:text-left">
             {[
-              { t: 'Copiar Link', d: 'Encontre o vídeo no TikTok e copie o URL' },
+              { t: 'Copiar Link', d: 'Encontre o vídeo no TikTok ou Instagram e copie o URL' },
               { t: 'Colar Aqui', d: 'Cole o link na barra de busca acima' },
-              { t: 'Obter Conteúdo', d: 'Escolha a qualidade e salve!' },
+              { t: 'Obter Conteúdo', d: 'Escolha a qualidade e salve no seu dispositivo!' },
             ].map((step, i) => (
               <div key={i} className="p-4 rounded-xl hover:bg-white/5 transition-colors">
                 <span className="text-[10px] font-bold text-[#fe2c55] mb-2 block tracking-widest uppercase">Passo {i+1}</span>
