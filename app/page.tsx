@@ -64,19 +64,38 @@ export default function TikTokDownloader() {
 
   const handleDownload = async (mediaUrl: string, filename: string) => {
     if (!mediaUrl) return;
+    setLoading(true);
+    setError(null);
+    
     try {
-      // Usar o nosso proxy de download para garantir integridade e evitar bloqueios de CORS/Hotlinking
+      // Pequeno truque: tentamos um fetch HEAD ou GET rápido para ver se o proxy retorna erro
+      // antes de redirecionar a página para o download
       const proxyUrl = `/api/download?url=${encodeURIComponent(mediaUrl)}&filename=${encodeURIComponent(filename)}`;
       
-      const link = document.createElement('a');
-      link.href = proxyUrl;
-      link.setAttribute('download', filename);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } catch (err) {
-      console.error('Erro ao iniciar download:', err);
-      setError('Não foi possível iniciar o download. Tente novamente.');
+      const response = await fetch(proxyUrl, { method: 'GET' });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao processar download');
+      }
+
+      // Se OK, transformamos a resposta em um blob para disparar o download real
+      // Isso é mais seguro que o redirect direto pois garante que o conteúdo é válido
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+    } catch (err: any) {
+      console.error('Erro ao baixar:', err);
+      setError(err.message || 'Não foi possível baixar o arquivo. O link original pode ter expirado.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -115,7 +134,7 @@ export default function TikTokDownloader() {
             transition={{ delay: 0.2 }}
             className="text-white/50 text-lg md:text-xl max-w-xl mx-auto"
           >
-            Baixe vídeos do TikTok e Instagram sem marca d'água em alta qualidade.
+            Baixe vídeos do TikTok e Instagram sem marca d&apos;água em alta qualidade.
           </motion.p>
         </header>
 

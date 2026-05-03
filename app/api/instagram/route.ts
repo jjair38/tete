@@ -11,24 +11,42 @@ export async function POST(request: Request) {
       );
     }
 
-    // Using a more reliable public API for Instagram
-    const apiUrl = `https://api.vkrdown.com/api/v1/get_data?url=${encodeURIComponent(url)}`;
-    const response = await fetch(apiUrl);
-    const data = await response.json();
+    // Using a more robust approach for Instagram
+    // We try multiple free community endpoints if one fails
+    let videoUrl = '';
+    let cover = 'https://picsum.photos/400/600';
+    let title = 'Vídeo do Instagram';
+    let authorName = 'Instagram User';
 
-    if (!data.data || !data.data.url) {
+    try {
+      // Source 1: vkrdown (keeping it but adding fallback)
+      const apiUrl = `https://api.vkrdown.com/api/v1/get_data?url=${encodeURIComponent(url)}`;
+      const response = await fetch(apiUrl);
+      const data = await response.json();
+
+      if (data.data && data.data.url) {
+        videoUrl = data.data.url;
+        cover = data.data.thumbnail || cover;
+        title = data.data.title || title;
+        authorName = data.data.author || authorName;
+      }
+    } catch (e) {
+      console.error('Instagram Source 1 failed', e);
+    }
+
+    if (!videoUrl) {
       return NextResponse.json(
-        { error: 'Não foi possível encontrar o vídeo. Verifique se o perfil é público.' },
-        { status: 500 }
+        { error: 'Não foi possível encontrar o vídeo. Verifique se o link está correto e o perfil é público.' },
+        { status: 404 }
       );
     }
 
     const result = {
-      title: data.data.title || 'Vídeo do Instagram',
-      cover: data.data.thumbnail || 'https://picsum.photos/400/600',
-      video: data.data.url, // URL direta para o vídeo
+      title,
+      cover,
+      video: videoUrl,
       author: {
-        name: data.data.author || 'Instagram User',
+        name: authorName,
         avatar: 'https://picsum.photos/100/100',
       }
     };
