@@ -200,34 +200,44 @@ export default function TikTokDownloader() {
             >
               {/* Preview Card */}
               <div className="md:col-span-12 lg:col-span-5 relative group rounded-3xl overflow-hidden aspect-[9/16] bg-white/5 border border-white/10 shadow-2xl shadow-black max-h-[600px] mx-auto md:w-[350px] lg:w-full">
-                <Image
-                  src={videoData.cover}
-                  alt="Video Cover"
-                  fill
-                  className="object-cover transition-transform group-hover:scale-105"
-                  referrerPolicy="no-referrer"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40 p-6 flex flex-col justify-between">
+                {videoData.cover && (
+                  <Image
+                    src={videoData.cover}
+                    alt="Video Cover"
+                    fill
+                    className="object-cover transition-transform group-hover:scale-105"
+                    referrerPolicy="no-referrer"
+                    unoptimized={true} // Algumas CDNs bloqueiam o otimizador do Next.js
+                  />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-black/40 p-6 flex flex-col justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full border-2 border-white overflow-hidden relative">
-                      <Image
-                        src={videoData.author.avatar}
-                        alt={videoData.author.name}
-                        fill
-                        className="object-cover"
-                        referrerPolicy="no-referrer"
-                      />
+                    <div className="w-10 h-10 rounded-full border-2 border-white overflow-hidden relative bg-white/10">
+                      {videoData.author.avatar && (
+                        <Image
+                          src={videoData.author.avatar}
+                          alt={videoData.author.name}
+                          fill
+                          className="object-cover"
+                          referrerPolicy="no-referrer"
+                          unoptimized={true}
+                        />
+                      )}
                     </div>
-                    <div>
-                      <h4 className="font-bold text-sm leading-tight">@{videoData.author.name}</h4>
+                    <div className="overflow-hidden">
+                      <h4 className="font-bold text-sm leading-tight truncate">@{videoData.author.name}</h4>
                       <p className="text-[10px] text-white/70 uppercase tracking-widest">Criador</p>
                     </div>
                   </div>
                   
                   <div className="space-y-4">
-                    <p className="text-sm font-medium line-clamp-2 leading-relaxed">
-                      {videoData.title}
-                    </p>
+                    <div className="space-y-1">
+                       <span className="text-[10px] font-bold uppercase tracking-widest text-[#25f4ee]">Resumo do Vídeo</span>
+                       <p className="text-sm font-medium line-clamp-3 leading-relaxed">
+                        {videoData.title || 'Sem descrição disponível'}
+                      </p>
+                    </div>
+                    
                     <div className="flex items-center justify-between text-xs font-bold text-white/80 border-t border-white/10 pt-4">
                       {videoData.stats?.plays !== undefined && (
                         <div className="flex flex-col items-center gap-1">

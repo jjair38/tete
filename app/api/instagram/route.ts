@@ -14,12 +14,13 @@ export async function POST(request: Request) {
     // Using a more robust approach for Instagram
     // We try multiple free community endpoints if one fails
     let videoUrl = '';
+    let musicUrl = '';
     let cover = 'https://picsum.photos/400/600';
     let title = 'Vídeo do Instagram';
     let authorName = 'Instagram User';
 
     try {
-      // Source 1: vkrdown (keeping it but adding fallback)
+      // Source 1: vkrdown
       const apiUrl = `https://api.vkrdown.com/api/v1/get_data?url=${encodeURIComponent(url)}`;
       const response = await fetch(apiUrl);
       const data = await response.json();
@@ -29,6 +30,16 @@ export async function POST(request: Request) {
         cover = data.data.thumbnail || cover;
         title = data.data.title || title;
         authorName = data.data.author || authorName;
+        // Check for audio/music in various possible fields
+        if (data.data.music_url) {
+          musicUrl = data.data.music_url;
+        } else if (data.data.audio) {
+          musicUrl = data.data.audio;
+        } else if (data.data.music_info && data.data.music_info.play_url) {
+          musicUrl = data.data.music_info.play_url;
+        } else if (data.data.music && typeof data.data.music === 'string') {
+          musicUrl = data.data.music;
+        }
       }
     } catch (e) {
       console.error('Instagram Source 1 failed', e);
@@ -45,6 +56,7 @@ export async function POST(request: Request) {
       title,
       cover,
       video: videoUrl,
+      music: musicUrl,
       author: {
         name: authorName,
         avatar: 'https://picsum.photos/100/100',
