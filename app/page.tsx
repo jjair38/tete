@@ -40,7 +40,7 @@ interface DownloadData {
   };
 }
 
-export default function TikTokDownloader() {
+export default function SocialDownloader() {
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,7 +58,7 @@ export default function TikTokDownloader() {
     setDownloading(null);
 
     try {
-      const isInstagram = url.includes('instagram.com');
+      const isInstagram = url.includes('instagram.com') || url.includes('instagr.am');
       const apiEndpoint = isInstagram ? '/api/instagram' : '/api/tiktok';
 
       const response = await fetch(apiEndpoint, {
@@ -146,6 +146,11 @@ export default function TikTokDownloader() {
             Baixe vídeos do TikTok e Instagram sem marca d&apos;água em alta qualidade.
           </motion.p>
         </header>
+
+        {/* Top Ad Space */}
+        <div className="mb-8 w-full h-[60px] md:h-[90px] bg-white/5 border border-dashed border-white/10 rounded-xl flex items-center justify-center text-[10px] uppercase tracking-widest text-white/20 italic">
+          Espaço Publicitário
+        </div>
 
         {/* Search Input */}
         <motion.div
@@ -382,6 +387,15 @@ export default function TikTokDownloader() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Google Ads Placement */}
+        <section className="mt-12 bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col items-center justify-center min-h-[150px]">
+          <span className="text-[10px] uppercase tracking-widest text-white/30 mb-2">Publicidade</span>
+          {/* Espaço para o código do Google AdSense */}
+          <div className="w-full h-[90px] bg-white/5 border border-dashed border-white/10 rounded-lg flex items-center justify-center text-white/20 text-sm italic">
+            Seu anúncio aqui
+          </div>
+        </section>
 
         {/* Footer */}
         <footer className="mt-24 text-center border-t border-white/5 pt-12">

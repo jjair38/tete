@@ -4,11 +4,23 @@ export async function POST(request: Request) {
   try {
     const { url } = await request.json();
 
-    if (!url || !url.includes('instagram.com')) {
+    if (!url || (!url.includes('instagram.com') && !url.includes('instagr.am'))) {
       return NextResponse.json(
         { error: 'URL do Instagram inválida' },
         { status: 400 }
       );
+    }
+
+    let finalUrl = url;
+
+    // Follow redirects for short links if needed
+    if (url.includes('instagr.am')) {
+      try {
+        const headRes = await fetch(url, { method: 'HEAD', redirect: 'follow' });
+        finalUrl = headRes.url;
+      } catch (e) {
+        console.error('Failed to resolve short link:', e);
+      }
     }
 
     // Using a more robust approach for Instagram
@@ -21,7 +33,7 @@ export async function POST(request: Request) {
 
     try {
       // Source 1: vkrdown
-      const apiUrl = `https://api.vkrdown.com/api/v1/get_data?url=${encodeURIComponent(url)}`;
+      const apiUrl = `https://api.vkrdown.com/api/v1/get_data?url=${encodeURIComponent(finalUrl)}`;
       const response = await fetch(apiUrl);
       const data = await response.json();
 
