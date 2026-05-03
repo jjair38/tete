@@ -165,12 +165,6 @@ export default function SocialDownloader() {
           </motion.p>
         </header>
 
-        {/* Top Ad Space */}
-        <AdBanner 
-          adSlot={process.env.NEXT_PUBLIC_ADSENSE_SLOT_TOP || ""} 
-          className="mb-6 min-h-[60px]"
-        />
-
         {/* Search Input */}
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
