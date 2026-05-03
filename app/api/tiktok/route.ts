@@ -1,73 +1,55 @@
 import { NextResponse } from 'next/server';
 
-export async function POST(request: Request) {
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const url = searchParams.get('url');
+
+  if (!url) {
+    return NextResponse.json({ error: 'URL is required' }, { status: 400 });
+  }
+
   try {
-    const { url } = await request.json();
-
-    if (!url || !url.includes('tiktok.com')) {
-      return NextResponse.json(
-        { error: 'URL do TikTok inválida' },
-        { status: 400 }
-      );
-    }
-
-    // Using TikWM public API (Unofficial)
-    // This is a common public API for fetching TikTok metadata
-    const response = await fetch('https://www.tikwm.com/api/', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams({
-        url: url,
-        count: '12',
-        cursor: '0',
-        web: '1',
-        hd: '1',
-      }),
-    });
-
+    // Example TikTok API (public/free)
+    const apiUrl = `https://www.tikwm.com/api/?url=${encodeURIComponent(url)}`;
+    const response = await fetch(apiUrl);
     const data = await response.json();
 
-    if (data.code !== 0) {
-      return NextResponse.json(
-        { error: data.msg || 'Falha ao buscar dados do vídeo' },
-        { status: 500 }
-      );
+    if (!data.data) {
+      return NextResponse.json({ error: 'Failed to fetch TikTok data' }, { status: 404 });
     }
 
-    const baseUrl = 'https://www.tikwm.com';
-    const ensureAbsolute = (path: string) => {
-      if (!path) return '';
-      if (path.startsWith('http')) return path;
-      return path.startsWith('/') ? `${baseUrl}${path}` : `${baseUrl}/${path}`;
-    };
+    const formats = [];
+    
+    if (data.data.hdplay) {
+      formats.push({
+        quality: 'HD',
+        url: data.data.hdplay,
+        size: data.data.hd_size ? `${(data.data.hd_size / 1024 / 1024).toFixed(2)} MB` : undefined
+      });
+    }
+    
+    if (data.data.play) {
+      formats.push({
+        quality: 'SD',
+        url: data.data.play,
+        size: data.data.size ? `${(data.data.size / 1024 / 1024).toFixed(2)} MB` : undefined
+      });
+    }
 
-    // Extracting needed data
-    const result = {
+    return NextResponse.json({
       title: data.data.title,
-      cover: ensureAbsolute(data.data.cover),
-      video: ensureAbsolute(data.data.play), // Normal quality
-      videoHd: ensureAbsolute(data.data.hdplay), // HD quality
-      music: ensureAbsolute(data.data.music),
+      cover: data.data.cover,
+      video: data.data.play,
+      formats: formats,
+      music: data.data.music,
       author: {
         name: data.data.author.nickname,
-        avatar: ensureAbsolute(data.data.author.avatar),
-      },
-      stats: {
-        plays: data.data.play_count,
-        digg: data.data.digg_count,
-        comments: data.data.comment_count,
-        share: data.data.share_count,
-      },
-    };
+        avatar: data.data.author.avatar
+      }
+    });
 
-    return NextResponse.json(result);
   } catch (error) {
-    console.error('TikTok downloader error:', error);
-    return NextResponse.json(
-      { error: 'An unexpected error occurred' },
-      { status: 500 }
-    );
+    console.error('TikTok API error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -1,6 +1,5 @@
 {
-  "name": "SOCIAL DOWNLOADER",
-  "description": "Baixe vídeos do TikTok e Instagram de forma rápida e segura.",
-  "requestFramePermissions": [],
-  "majorCapabilities": []
+  "name": "Social Video Downloader",
+  "description": "Download videos from TikTok and Instagram in high quality.",
+  "requestFramePermissions": []
 }

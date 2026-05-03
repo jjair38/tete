@@ -1,0 +1,27 @@
+{
+  "entities": {
+    "Stats": {
+      "title": "Stats",
+      "description": "Global application statistics",
+      "type": "object",
+      "properties": {
+        "accessCount": {
+          "type": "number",
+          "description": "Total number of page views"
+        },
+        "lastUpdated": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last time the counter was updated"
+        }
+      },
+      "required": ["accessCount"]
+    }
+  },
+  "firestore": {
+    "/stats/global": {
+      "schema": "Stats",
+      "description": "Global statistics document"
+    }
+  }
+}

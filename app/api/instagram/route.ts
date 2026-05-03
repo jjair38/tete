@@ -1,87 +1,84 @@
 import { NextResponse } from 'next/server';
 
-export async function POST(request: Request) {
-  try {
-    const { url } = await request.json();
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const url = searchParams.get('url');
 
-    if (!url || (!url.includes('instagram.com') && !url.includes('instagr.am'))) {
-      return NextResponse.json(
-        { error: 'URL do Instagram inválida' },
-        { status: 400 }
-      );
-    }
+  if (!url) {
+    return NextResponse.json({ error: 'URL is required' }, { status: 400 });
+  }
 
-    let finalUrl = url;
+  let videoUrl = '';
+  let formats: any[] = [];
+  let musicUrl = '';
+  let cover = 'https://picsum.photos/400/600';
+  let title = 'Vídeo do Instagram';
+  let authorName = 'Instagram User';
 
-    // Follow redirects for short links if needed
-    if (url.includes('instagr.am')) {
-      try {
-        const headRes = await fetch(url, { method: 'HEAD', redirect: 'follow' });
-        finalUrl = headRes.url;
-      } catch (e) {
-        console.error('Failed to resolve short link:', e);
-      }
-    }
+  const sources = [
+    `https://api.vkrdown.com/api/v1/get_data?url=${encodeURIComponent(url)}`,
+    `https://api2.vkrdown.com/api/v1/get_data?url=${encodeURIComponent(url)}`,
+    `https://pub-api.vkrdown.com/api/get_data?url=${encodeURIComponent(url)}`
+  ];
 
-    // Using a more robust approach for Instagram
-    // We try multiple free community endpoints if one fails
-    let videoUrl = '';
-    let musicUrl = '';
-    let cover = 'https://picsum.photos/400/600';
-    let title = 'Vídeo do Instagram';
-    let authorName = 'Instagram User';
+  for (const apiUrl of sources) {
+    if (videoUrl) break;
 
     try {
-      // Source 1: vkrdown
-      const apiUrl = `https://api.vkrdown.com/api/v1/get_data?url=${encodeURIComponent(finalUrl)}`;
-      const response = await fetch(apiUrl);
+      const response = await fetch(apiUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
+        },
+        next: { revalidate: 0 }
+      });
+      
+      if (!response.ok) continue;
+      
       const data = await response.json();
 
-      if (data.data && data.data.url) {
-        videoUrl = data.data.url;
-        cover = data.data.thumbnail || cover;
-        title = data.data.title || title;
-        authorName = data.data.author || authorName;
-        // Check for audio/music in various possible fields
-        if (data.data.music_url) {
-          musicUrl = data.data.music_url;
-        } else if (data.data.audio) {
-          musicUrl = data.data.audio;
-        } else if (data.data.music_info && data.data.music_info.play_url) {
-          musicUrl = data.data.music_info.play_url;
-        } else if (data.data.music && typeof data.data.music === 'string') {
-          musicUrl = data.data.music;
+      if (data.data && (data.data.url || data.data.medias)) {
+        if (data.data.url) {
+          videoUrl = data.data.url;
+          formats.push({ quality: 'Normal', url: videoUrl });
+        }
+        
+        if (data.data.medias && data.data.medias.length > 0) {
+          const videoMedias = data.data.medias.filter((m: any) => m.type === 'video');
+          if (videoMedias.length > 0) {
+            const uniqueVideoFormats = videoMedias.map((m: any) => ({
+              quality: m.quality || 'HD',
+              url: m.url,
+              size: m.size_display || undefined
+            }));
+            
+            uniqueVideoFormats.sort((a: any, b: any) => (parseInt(b.quality) || 0) - (parseInt(a.quality) || 0));
+            formats = uniqueVideoFormats;
+            videoUrl = formats[0].url;
+          }
+        }
+        
+        if (videoUrl) {
+          cover = data.data.thumbnail || data.data.cover || cover;
+          title = data.data.title || title;
+          authorName = data.data.author || authorName;
+          musicUrl = data.data.music_url || data.data.audio || '';
         }
       }
     } catch (e) {
-      console.error('Instagram Source 1 failed', e);
+      console.error(`Instagram Source failed: ${apiUrl}`, e);
     }
-
-    if (!videoUrl) {
-      return NextResponse.json(
-        { error: 'Não foi possível encontrar o vídeo. Verifique se o link está correto e o perfil é público.' },
-        { status: 404 }
-      );
-    }
-
-    const result = {
-      title,
-      cover,
-      video: videoUrl,
-      music: musicUrl,
-      author: {
-        name: authorName,
-        avatar: 'https://picsum.photos/100/100',
-      }
-    };
-
-    return NextResponse.json(result);
-
-  } catch (error) {
-    console.error('Instagram downloader error:', error);
-    return NextResponse.json(
-      { error: 'Erro ao processar o link do Instagram' },
-      { status: 500 }
-    );
   }
+
+  if (!videoUrl) {
+    return NextResponse.json({ error: 'Não foi possível encontrar o vídeo do Instagram.' }, { status: 404 });
+  }
+
+  return NextResponse.json({
+    title,
+    cover,
+    video: videoUrl,
+    formats,
+    music: musicUrl,
+    author: { name: authorName, avatar: '' }
+  });
 }

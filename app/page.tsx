@@ -1,62 +1,73 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  Download, 
   Search, 
+  Download, 
   Loader2, 
   Video, 
   Music, 
-  Eye, 
-  Heart, 
-  MessageCircle, 
-  Share2, 
-  User, 
-  ShieldCheck, 
+  CheckCircle2, 
   Zap, 
   Smartphone, 
   AlertCircle,
   ExternalLink,
   ClipboardPaste,
-  X
+  X,
+  History,
+  TrendingUp,
+  ShieldCheck
 } from 'lucide-react';
 import Image from 'next/image';
 import AdBanner from '@/components/AdBanner';
+import AccessCounter from '@/components/AccessCounter';
+
+interface VideoFormat {
+  quality: string;
+  url: string;
+  size?: string;
+}
 
 interface DownloadData {
   title: string;
   cover: string;
   video: string;
-  videoHd?: string;
+  formats?: VideoFormat[];
   music?: string;
   platform: 'tiktok' | 'instagram';
   author: {
     name: string;
     avatar: string;
   };
-  stats?: {
-    plays?: number;
-    digg?: number;
-    comments?: number;
-    share?: number;
-  };
 }
 
-export default function SocialDownloader() {
+export default function Home() {
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [videoData, setVideoData] = useState<DownloadData | null>(null);
-
   const [downloading, setDownloading] = useState<string | null>(null);
+  const [selectedFormatIndex, setSelectedFormatIndex] = useState<number>(0);
 
   const handlePaste = async () => {
+    if (typeof window === 'undefined') return;
+    
+    if (!navigator.clipboard || !navigator.clipboard.readText) {
+      setError('O seu navegador bloqueou o acesso automático à área de transferência. Por favor, use Ctrl+V para colar o link manualmente.');
+      setTimeout(() => setError(null), 5000);
+      return;
+    }
+
     try {
       const text = await navigator.clipboard.readText();
-      if (text) setUrl(text);
+      if (text) {
+        setUrl(text);
+        setError(null);
+      }
     } catch (err) {
       console.error('Failed to read clipboard:', err);
+      setError('Não foi possível acessar a área de transferência. Por favor, cole manualmente.');
     }
   };
 
@@ -73,25 +84,25 @@ export default function SocialDownloader() {
     setLoading(true);
     setError(null);
     setVideoData(null);
-    setDownloading(null);
 
     try {
-      const isInstagram = url.includes('instagram.com') || url.includes('instagr.am');
-      const apiEndpoint = isInstagram ? '/api/instagram' : '/api/tiktok';
+      const isInstagram = url.includes('instagram.com');
+      const isTikTok = url.includes('tiktok.com');
 
-      const response = await fetch(apiEndpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url }),
-      });
+      if (!isInstagram && !isTikTok) {
+        throw new Error('Por favor, insira um link válido do TikTok ou Instagram.');
+      }
 
+      const endpoint = isInstagram ? '/api/instagram' : '/api/tiktok';
+      const response = await fetch(`${endpoint}?url=${encodeURIComponent(url)}`);
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Falha ao buscar vídeo');
+        throw new Error(data.error || 'Não foi possível buscar o vídeo.');
       }
 
       setVideoData({ ...data, platform: isInstagram ? 'instagram' : 'tiktok' });
+      setSelectedFormatIndex(0);
     } catch (err: any) {
       setError(err.message || 'Algo deu errado');
     } finally {
@@ -99,25 +110,23 @@ export default function SocialDownloader() {
     }
   };
 
-  const handleDownload = async (mediaUrl: string, filename: string, type: string) => {
-    if (!mediaUrl) return;
+  const handleDownload = async (url: string, filename: string, type: string) => {
     setDownloading(type);
-    setError(null);
-    
     try {
-      const proxyUrl = `/api/download?url=${encodeURIComponent(mediaUrl)}&filename=${encodeURIComponent(filename)}`;
-      
+      const response = await fetch(`/api/download?url=${encodeURIComponent(url)}`);
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href = proxyUrl;
-      link.setAttribute('download', filename);
+      link.href = downloadUrl;
+      link.download = filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
-      setTimeout(() => setDownloading(null), 3000);
-    } catch (err: any) {
-      console.error('Erro ao baixar:', err);
-      setError('Problema no proxy. Tente usar o botão de "Abrir Original" ao lado.');
+    } catch (err) {
+      console.error('Download failed:', err);
+      // Fallback: open in new tab
+      window.open(url, '_blank');
+    } finally {
       setDownloading(null);
     }
   };
@@ -127,9 +136,10 @@ export default function SocialDownloader() {
   };
 
   return (
-    <main className="min-h-screen bg-[#010101] text-white font-sans selection:bg-[#fe2c55] selection:text-white">
-      {/* Background Glow */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+    <main className="min-h-screen relative overflow-x-hidden selection:bg-[#fe2c55]/30">
+      {/* Background with multiple layers */}
+      <div className="fixed inset-0 z-0">
+        <div className="absolute inset-0 bg-[#0f0f0f]" />
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-[#fe2c55]/10 blur-[120px]" />
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-[#25f4ee]/10 blur-[120px]" />
       </div>
@@ -140,28 +150,29 @@ export default function SocialDownloader() {
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 mb-4"
+            className="flex flex-col items-center gap-4 mb-4"
           >
-            <span className="w-2 h-2 rounded-full bg-[#fe2c55] animate-pulse" />
-            <span className="text-xs font-medium tracking-wider uppercase text-white/70">Downloader Online</span>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10">
+              <span className="w-2 h-2 rounded-full bg-[#fe2c55] animate-pulse" />
+              <span className="text-xs font-medium tracking-wider uppercase text-white/70">Downloader Online</span>
+            </div>
+            <AccessCounter />
           </motion.div>
           
           <motion.h1
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="text-4xl md:text-6xl font-black tracking-tighter mb-4"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="text-5xl md:text-7xl font-black mb-4 tracking-tighter"
           >
-            SOCIAL <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#fe2c55] via-[#25f4ee] to-[#fe2c55] bg-[length:200%_auto] animate-gradient">DOWNLOADER</span>
+            Social <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#fe2c55] via-[#ffffff] to-[#25f4ee]">Save</span>
           </motion.h1>
-          
           <motion.p
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
             transition={{ delay: 0.2 }}
-            className="text-white/50 text-lg md:text-xl max-w-xl mx-auto"
+            className="text-white/40 text-lg md:text-xl font-medium"
           >
-            Baixe vídeos do TikTok e Instagram sem marca d&apos;água em alta qualidade.
+            Baixe vídeos do <span className="text-white">TikTok</span> e <span className="text-white">Instagram</span> sem marca d'água.
           </motion.p>
         </header>
 
@@ -220,150 +231,144 @@ export default function SocialDownloader() {
             </button>
           </form>
           
-          {error && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mt-4 p-4 rounded-xl bg-[#fe2c55]/10 border border-[#fe2c55]/20 flex items-center gap-3 text-[#fe2c55]"
-            >
-              <AlertCircle className="w-5 h-5 flex-shrink-0" />
-              <p className="text-sm font-medium">{error}</p>
-            </motion.div>
-          )}
+          <AnimatePresence>
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="mt-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 flex items-center gap-3"
+              >
+                <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                <p className="text-sm font-medium">{error}</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.div>
 
-        {/* Results Section */}
+        {/* Results Area */}
         <AnimatePresence mode="wait">
           {videoData && (
             <motion.div
-              key="results"
-              id="results-section"
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 40 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="grid grid-cols-1 md:grid-cols-12 gap-8"
+              exit={{ opacity: 0, y: -40 }}
+              className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start mb-16"
             >
-              {/* Preview Card */}
-              <div className="md:col-span-12 lg:col-span-5 relative group rounded-3xl overflow-hidden aspect-[9/16] bg-white/5 border border-white/10 shadow-2xl shadow-black max-h-[600px] mx-auto md:w-[350px] lg:w-full">
-                {videoData.cover && (
-                  <Image
-                    src={videoData.cover}
-                    alt="Video Cover"
-                    fill
-                    className="object-cover transition-transform group-hover:scale-105"
+              <div className="md:col-span-5">
+                <div className="relative aspect-[9/16] rounded-3xl overflow-hidden shadow-2xl shadow-[#fe2c55]/20 bg-white/5 border border-white/10">
+                  <Image 
+                    src={videoData.cover} 
+                    alt={videoData.title} 
+                    fill 
+                    className="object-cover"
                     referrerPolicy="no-referrer"
-                    unoptimized={true} // Algumas CDNs bloqueiam o otimizador do Next.js
                   />
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-black/40 p-6 flex flex-col justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full border-2 border-white overflow-hidden relative bg-white/10">
-                      {videoData.author.avatar && (
-                        <Image
-                          src={videoData.author.avatar}
-                          alt={videoData.author.name}
-                          fill
-                          className="object-cover"
-                          referrerPolicy="no-referrer"
-                          unoptimized={true}
-                        />
-                      )}
-                    </div>
-                    <div className="overflow-hidden">
-                      <h4 className="font-bold text-sm leading-tight truncate">@{videoData.author.name}</h4>
-                      <p className="text-[10px] text-white/70 uppercase tracking-widest">Criador</p>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    <div className="space-y-1">
-                       <span className="text-[10px] font-bold uppercase tracking-widest text-[#25f4ee]">Resumo do Vídeo</span>
-                       <p className="text-sm font-medium line-clamp-3 leading-relaxed">
-                        {videoData.title || 'Sem descrição disponível'}
-                      </p>
-                    </div>
-                    
-                    <div className="flex items-center justify-between text-xs font-bold text-white/80 border-t border-white/10 pt-4">
-                      {videoData.stats?.plays !== undefined && (
-                        <div className="flex flex-col items-center gap-1">
-                          <Eye className="w-4 h-4 text-[#25f4ee]" />
-                          <span>{videoData.stats.plays.toLocaleString()}</span>
-                        </div>
-                      )}
-                      {videoData.stats?.digg !== undefined && (
-                        <div className="flex flex-col items-center gap-1">
-                          <Heart className="w-4 h-4 text-[#fe2c55]" />
-                          <span>{videoData.stats.digg.toLocaleString()}</span>
-                        </div>
-                      )}
-                      {videoData.stats?.comments !== undefined && (
-                        <div className="flex flex-col items-center gap-1">
-                          <MessageCircle className="w-4 h-4 text-[#25f4ee]" />
-                          <span>{videoData.stats.comments.toLocaleString()}</span>
-                        </div>
-                      )}
-                      {videoData.stats?.share !== undefined && (
-                        <div className="flex flex-col items-center gap-1">
-                          <Share2 className="w-4 h-4 text-[#fe2c55]" />
-                          <span>{videoData.stats.share.toLocaleString()}</span>
-                        </div>
-                      )}
-                      {/* Mostrar uma mensagem simples se não houver stats (comum no Instagram) */}
-                      {!videoData.stats && (
-                        <div className="flex items-center justify-center w-full py-2 opacity-50">
-                          <span className="text-[10px] uppercase tracking-widest text-[#25f4ee]">Social Media Content</span>
-                        </div>
-                      )}
-                    </div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                  <div className="absolute bottom-6 left-6 right-6">
+                    <p className="text-white text-xs mb-3 font-medium opacity-60 flex items-center gap-2">
+                       <Smartphone className="w-3 h-3" />
+                       Visualização do Vídeo
+                    </p>
+                    <p className="text-white text-lg font-bold line-clamp-2 leading-tight">
+                      {videoData.title || 'Sem título'}
+                    </p>
                   </div>
                 </div>
               </div>
 
-              {/* Actions Section */}
-              <div className="md:col-span-12 lg:col-span-7 flex flex-col gap-6">
-                <div className="p-6 rounded-3xl bg-white/5 border border-white/10">
+              <div className="md:col-span-7 space-y-8">
+                <div className="p-8 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-xl relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <Zap className="w-24 h-24" />
+                  </div>
+                  
+                  <div className="flex items-center gap-4 mb-8">
+                    <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-white/20">
+                      <Image 
+                        src={videoData.author.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${videoData.author.name}`} 
+                        alt={videoData.author.name} 
+                        width={64} 
+                        height={64}
+                        referrerPolicy="no-referrer"
+                      />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-black">{videoData.author.name}</h2>
+                      <p className="text-sm text-white/40 font-bold uppercase tracking-wider">Criador de Conteúdo</p>
+                    </div>
+                  </div>
+
                   <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center">
                       <Download className="w-4 h-4" />
                     </div>
                     Opções de Download
                   </h3>
-                              <div className="space-y-4">
-                    {videoData.videoHd && (
-                      <div className="flex gap-2">
-                        <button
-                          disabled={!!downloading}
-                          onClick={() => handleDownload(videoData.videoHd!, `${videoData.platform}_hd_${Date.now()}.mp4`, 'hd')}
-                          className="flex-1 py-4 px-6 rounded-2xl bg-white text-black font-bold flex items-center justify-between hover:bg-[#25f4ee] hover:text-black transition-all active:scale-[0.98] disabled:opacity-50 group"
-                        >
-                          <div className="flex items-center gap-3">
-                            {downloading === 'hd' ? <Loader2 className="w-5 h-5 animate-spin" /> : <Video className="w-5 h-5 group-hover:animate-bounce" />}
-                            <span>Baixar HD</span>
+                  
+                  <div className="space-y-4">
+                    {videoData.formats && videoData.formats.length > 0 ? (
+                      <div className="space-y-4">
+                        <div className="flex flex-col gap-2">
+                          <label className="text-[10px] font-bold uppercase tracking-widest text-white/40 ml-1">
+                            Selecione a Qualidade
+                          </label>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                            {videoData.formats.map((format, idx) => (
+                              <button
+                                key={idx}
+                                onClick={() => setSelectedFormatIndex(idx)}
+                                className={`py-3 px-2 rounded-xl text-xs font-bold transition-all border ${
+                                  selectedFormatIndex === idx 
+                                    ? 'bg-[#25f4ee] text-black border-[#25f4ee]' 
+                                    : 'bg-white/5 text-white/60 border-white/10 hover:border-white/30'
+                                }`}
+                              >
+                                {format.quality}
+                                {format.size && <span className="block opacity-60 text-[9px] font-medium">{format.size}</span>}
+                              </button>
+                            ))}
                           </div>
-                          <span className="text-[10px] uppercase tracking-widest opacity-50 hidden sm:inline">Melhor</span>
-                        </button>
-                        <button 
-                          onClick={() => openDirectly(videoData.videoHd!)}
-                          title="Abrir link original"
-                          className="px-4 rounded-2xl bg-white/10 hover:bg-white/20 transition-all active:scale-95"
-                        >
-                          <ExternalLink className="w-5 h-5 text-white/60" />
-                        </button>
+                        </div>
+
+                        <div className="flex gap-2">
+                          <button
+                            disabled={!!downloading}
+                            onClick={() => {
+                              const format = videoData.formats![selectedFormatIndex];
+                              handleDownload(format.url, `${videoData.platform}_${format.quality}_${Date.now()}.mp4`, 'video');
+                            }}
+                            className="flex-1 py-4 px-6 rounded-2xl bg-white text-black font-bold flex items-center justify-between hover:bg-[#25f4ee] hover:text-black transition-all active:scale-[0.98] disabled:opacity-50 group shadow-xl shadow-black/20"
+                          >
+                            <div className="flex items-center gap-3">
+                              {downloading === 'video' ? <Loader2 className="w-5 h-5 animate-spin" /> : <Video className="w-5 h-5 group-hover:animate-bounce" />}
+                              <span>{downloading === 'video' ? 'Baixando...' : 'Baixar Vídeo'}</span>
+                            </div>
+                            <div className="flex flex-col items-end">
+                              <span className="text-[10px] uppercase tracking-widest opacity-50">{videoData.formats[selectedFormatIndex].quality}</span>
+                            </div>
+                          </button>
+                          <button 
+                            onClick={() => openDirectly(videoData.formats![selectedFormatIndex].url)}
+                            title="Abrir link original"
+                            className="px-4 rounded-2xl bg-white/10 hover:bg-white/20 transition-all active:scale-95"
+                          >
+                            <ExternalLink className="w-5 h-5 text-white/60" />
+                          </button>
+                        </div>
                       </div>
-                    )}
-                    
-                    {videoData.video && (
+                    ) : (
                       <div className="flex gap-2">
                         <button
                           disabled={!!downloading}
                           onClick={() => handleDownload(videoData.video, `${videoData.platform}_${Date.now()}.mp4`, 'sd')}
-                          className="flex-1 py-4 px-6 rounded-2xl bg-white/5 border border-white/10 text-white font-bold flex items-center justify-between hover:bg-white/10 transition-all active:scale-[0.98] disabled:opacity-50 group"
+                          className="flex-1 py-4 px-6 rounded-2xl bg-white text-black font-bold flex items-center justify-between hover:bg-[#25f4ee] hover:text-black transition-all active:scale-[0.98] disabled:opacity-50 group shadow-xl"
                         >
                           <div className="flex items-center gap-3">
                             {downloading === 'sd' ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5 group-hover:translate-y-1 transition-transform" />}
-                            <span>{videoData.videoHd ? 'Download Padrão' : 'Baixar Vídeo'}</span>
+                            <span>{downloading === 'sd' ? 'Baixando...' : 'Baixar Vídeo'}</span>
                           </div>
-                          <span className="text-[10px] uppercase tracking-widest opacity-30 hidden sm:inline">Normal</span>
+                          <span className="text-[10px] uppercase tracking-widest opacity-30">Padrão</span>
                         </button>
                         <button 
                           onClick={() => openDirectly(videoData.video)}
@@ -374,21 +379,20 @@ export default function SocialDownloader() {
                         </button>
                       </div>
                     )}
-
+                    
                     {videoData.music && (
                       <div className="flex gap-2">
                         <button
                           disabled={!!downloading}
-                          onClick={() => handleDownload(videoData.music!, `music_${Date.now()}.mp3`, 'mp3')}
+                          onClick={() => handleDownload(videoData.music!, `${videoData.platform}_audio_${Date.now()}.mp3`, 'audio')}
                           className="flex-1 py-4 px-6 rounded-2xl bg-white/5 border border-white/10 text-white font-bold flex items-center justify-between hover:bg-white/10 transition-all active:scale-[0.98] disabled:opacity-50 group"
                         >
                           <div className="flex items-center gap-3">
-                            {downloading === 'mp3' ? <Loader2 className="w-5 h-5 animate-spin" /> : <Music className="w-5 h-5 group-hover:rotate-12 transition-transform" />}
-                            <span>Baixar MP3</span>
+                            {downloading === 'audio' ? <Loader2 className="w-5 h-5 animate-spin" /> : <Music className="w-5 h-5 group-hover:scale-110 transition-transform" />}
+                            <span>{downloading === 'audio' ? 'Baixando Áudio...' : 'Baixar Som/MP3'}</span>
                           </div>
-                          <span className="text-[10px] uppercase tracking-widest opacity-30 hidden sm:inline">Áudio</span>
                         </button>
-                        <button 
+                         <button 
                           onClick={() => openDirectly(videoData.music!)}
                           title="Abrir link original"
                           className="px-4 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all active:scale-95"
@@ -400,72 +404,52 @@ export default function SocialDownloader() {
                   </div>
                 </div>
 
-                <div className="p-6 rounded-3xl bg-[#fe2c55]/5 border border-[#fe2c55]/20">
-                  <div className="flex items-center gap-3 mb-2">
-                    <User className="w-4 h-4 text-[#fe2c55]" />
-                    <h5 className="text-xs font-bold uppercase tracking-widest text-[#fe2c55]">Aviso do Artista</h5>
-                  </div>
-                  <p className="text-sm text-white/60 leading-relaxed">
-                    Sempre dê os créditos ao criador original ao compartilhar o conteúdo. Esta ferramenta é apenas para uso pessoal e backup.
-                  </p>
-                </div>
+                {/* Bottom Ad Space */}
+                <AdBanner adSlot={process.env.NEXT_PUBLIC_ADSENSE_SLOT_BOTTOM || ""} />
               </div>
-            </motion.div>
-          )}
-
-          {!videoData && !loading && (
-            <motion.div
-              key="empty"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-center py-20 border-2 border-dashed border-white/5 rounded-3xl"
-            >
-              <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                <Video className="w-8 h-8 text-white/20" />
-              </div>
-              <p className="text-white/30 font-medium italic">Seus resultados aparecerão aqui</p>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Google Ads Placement */}
-        <section className="mt-12 bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col items-center justify-center">
-          <span className="text-[10px] uppercase tracking-widest text-white/30 mb-2">Publicidade</span>
-          <AdBanner 
-            adSlot={process.env.NEXT_PUBLIC_ADSENSE_SLOT_BOTTOM || ""} 
-            className="w-full min-h-[90px]"
-          />
+        {/* Features Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
+          {[
+            { icon: <ShieldCheck className="w-6 h-6 text-[#25f4ee]" />, title: 'Sem Marca d\'Água', desc: 'Download limpo em alta definição.' },
+            { icon: <Zap className="w-6 h-6 text-[#fe2c55]" />, title: 'Super Rápido', desc: 'Processamento instantâneo de links.' },
+            { icon: <History className="w-6 h-6 text-white" />, title: 'Totalmente Grátis', desc: 'Use quantas vezes quiser sem custos.' },
+          ].map((feature, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: i * 0.1 }}
+              className="p-6 rounded-3xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
+            >
+              <div className="mb-4">{feature.icon}</div>
+              <h3 className="text-lg font-bold mb-2">{feature.title}</h3>
+              <p className="text-white/40 text-sm">{feature.desc}</p>
+            </motion.div>
+          ))}
+        </div>
+
+        {/* Info Paragraphs */}
+        <section className="space-y-12 text-white/40 max-w-2xl mx-auto text-sm leading-relaxed text-center px-4">
+          <p>
+            Nossa plataforma oferece a maneira mais simples de baixar seus vídeos favoritos do TikTok e Instagram. 
+            Basta copiar o link da postagem, colar em nossa barra de busca e selecionar a qualidade desejada.
+          </p>
+          <div className="flex flex-wrap justify-center gap-x-8 gap-y-4 py-8 border-t border-white/5">
+            <span className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-[#25f4ee]" /> No Captcha</span>
+            <span className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-[#25f4ee]" /> MP4 & MP3</span>
+            <span className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-[#25f4ee]" /> HD Quality</span>
+          </div>
         </section>
 
-        {/* Footer */}
-        <footer className="mt-24 text-center border-t border-white/5 pt-12">
-          <p className="text-white/20 text-xs font-medium tracking-widest uppercase mb-4">Como baixar?</p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center md:text-left">
-            {[
-              { t: 'Copiar Link', d: 'Encontre o vídeo no TikTok ou Instagram e copie o URL' },
-              { t: 'Colar Aqui', d: 'Cole o link na barra de busca acima' },
-              { t: 'Obter Conteúdo', d: 'Escolha a qualidade e salve no seu dispositivo!' },
-            ].map((step, i) => (
-              <div key={i} className="p-4 rounded-xl hover:bg-white/5 transition-colors">
-                <span className="text-[10px] font-bold text-[#fe2c55] mb-2 block tracking-widest uppercase">Passo {i+1}</span>
-                <h4 className="font-bold text-white/80 mb-1">{step.t}</h4>
-                <p className="text-xs text-white/40">{step.d}</p>
-              </div>
-            ))}
-          </div>
+        <footer className="mt-16 pt-8 border-t border-white/5 text-center text-white/20 text-xs font-bold uppercase tracking-widest">
+           &copy; {new Date().getFullYear()} Social Save Downloader &bull; Made with 🤍
         </footer>
       </div>
-
-      <style jsx global>{`
-        @keyframes gradient {
-          0% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
-        }
-        .animate-gradient {
-          animation: gradient 3s linear infinite;
-        }
-      `}</style>
     </main>
   );
 }

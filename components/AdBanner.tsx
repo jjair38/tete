@@ -1,48 +1,31 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 interface AdBannerProps {
   adSlot: string;
-  adFormat?: 'auto' | 'fluid' | 'rectangle';
-  fullWidthResponsive?: boolean;
   className?: string;
 }
 
-declare global {
-  interface Window {
-    adsbygoogle: any[];
-  }
-}
-
-export default function AdBanner({ 
-  adSlot, 
-  adFormat = 'auto', 
-  fullWidthResponsive = true,
-  className = "" 
-}: AdBannerProps) {
-  const publisherId = "ca-pub-3630961061648944";
-
+export default function AdBanner({ adSlot, className = "" }: AdBannerProps) {
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        (window.adsbygoogle = window.adsbygoogle || []).push({});
-      } catch (e) {
-        console.error("AdSense error:", e);
-      }
+    try {
+      // @ts-ignore
+      (window.adsbygoogle = window.adsbygoogle || []).push({});
+    } catch (e) {
+      console.error('AdsError', e);
     }
   }, []);
 
   return (
-    <div className={`overflow-hidden flex items-center justify-center ${className}`}>
-      <ins
-        className="adsbygoogle"
-        style={{ display: 'block', width: '100%' }}
-        data-ad-client={publisherId}
+    <div className={`overflow-hidden flex items-center justify-center p-4 bg-white/5 rounded-2xl border border-white/10 ${className}`}>
+      <ins className="adsbygoogle"
+        style={{ display: 'block' }}
+        data-ad-client={process.env.NEXT_PUBLIC_ADSENSE_CLIENT}
         data-ad-slot={adSlot}
-        data-ad-format={adFormat}
-        data-full-width-responsive={fullWidthResponsive.toString()}
-      />
+        data-ad-format="auto"
+        data-full-width-responsive="true"></ins>
+        <span className="text-[10px] uppercase tracking-widest text-white/20 absolute">Espaço Publicitário</span>
     </div>
   );
 }

@@ -1,0 +1,34 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    match /stats/{docId} {
+      allow get: if true;
+      
+      allow update: if (
+        docId == 'global' &&
+        incoming().accessCount == existing().accessCount + 1 &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['accessCount', 'lastUpdated'])
+      ) || (
+        docId == 'global' && !exists(/databases/$(database)/documents/stats/global)
+      );
+
+      allow create: if (
+        docId == 'global' &&
+        incoming().keys().hasAll(['accessCount', 'lastUpdated']) &&
+        incoming().accessCount == 1
+      );
+    }
+  }
+}
