@@ -17,7 +17,9 @@ import {
   Zap, 
   Smartphone, 
   AlertCircle,
-  ExternalLink
+  ExternalLink,
+  ClipboardPaste,
+  X
 } from 'lucide-react';
 import Image from 'next/image';
 import AdBanner from '@/components/AdBanner';
@@ -48,6 +50,21 @@ export default function SocialDownloader() {
   const [videoData, setVideoData] = useState<DownloadData | null>(null);
 
   const [downloading, setDownloading] = useState<string | null>(null);
+
+  const handlePaste = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text) setUrl(text);
+    } catch (err) {
+      console.error('Failed to read clipboard:', err);
+    }
+  };
+
+  const handleClear = () => {
+    setUrl('');
+    setError(null);
+    setVideoData(null);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -161,24 +178,51 @@ export default function SocialDownloader() {
           transition={{ delay: 0.3 }}
           className="mb-12"
         >
-          <form onSubmit={handleSubmit} className="relative group">
-            <div className="absolute inset-y-0 left-6 flex items-center pointer-events-none">
-              <Search className="w-5 h-5 text-white/40 group-focus-within:text-[#fe2c55] transition-colors" />
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4 group">
+            <div className="relative">
+              <div className="absolute inset-y-0 left-6 flex items-center pointer-events-none">
+                <Search className="w-5 h-5 text-white/40 group-focus-within:text-[#fe2c55] transition-colors" />
+              </div>
+              <input
+                type="text"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                placeholder="Cole o link do TikTok ou Instagram aqui..."
+                className="w-full bg-white/5 border border-white/10 rounded-2xl py-6 pl-14 pr-24 text-white text-lg placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-[#fe2c55]/50 focus:border-[#fe2c55]/50 transition-all shadow-2xl shadow-black"
+              />
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2 pr-2">
+                {url && (
+                  <button
+                    type="button"
+                    onClick={handleClear}
+                    className="p-2 hover:bg-white/10 rounded-lg text-white/40 hover:text-white transition-colors"
+                    title="Limpar"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={handlePaste}
+                  className="p-2 hover:bg-white/10 rounded-lg text-white/40 hover:text-white transition-colors"
+                  title="Colar link"
+                >
+                  <ClipboardPaste className="w-5 h-5" />
+                </button>
+              </div>
             </div>
-            <input
-              type="text"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              placeholder="Cole o link do TikTok ou Instagram aqui..."
-              className="w-full bg-white/5 border border-white/10 rounded-2xl py-6 pl-14 pr-36 text-white text-lg placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-[#fe2c55]/50 focus:border-[#fe2c55]/50 transition-all shadow-2xl shadow-black"
-            />
             <button
               type="submit"
               id="search-button"
               disabled={loading || !url}
-              className="absolute right-3 top-3 bottom-3 px-8 rounded-xl bg-white text-black font-bold hover:bg-[#fe2c55] hover:text-white transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none flex items-center gap-2"
+              className="w-full py-5 rounded-2xl bg-white text-black font-bold text-lg hover:bg-[#fe2c55] hover:text-white transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2 shadow-xl"
             >
-              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Buscar'}
+              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (
+                <>
+                  <Zap className="w-5 h-5" />
+                  <span>Buscar Vídeo</span>
+                </>
+              )}
             </button>
           </form>
           
