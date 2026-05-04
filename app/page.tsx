@@ -17,7 +17,9 @@ import {
   X,
   History,
   TrendingUp,
-  ShieldCheck
+  ShieldCheck,
+  Activity,
+  Clock
 } from 'lucide-react';
 import Image from 'next/image';
 import AdBanner from '@/components/AdBanner';
@@ -50,7 +52,17 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [videoData, setVideoData] = useState<DownloadData | null>(null);
   const [downloading, setDownloading] = useState<string | null>(null);
+  const [downloadProgress, setDownloadProgress] = useState(0);
+  const [downloadMetrics, setDownloadMetrics] = useState({ speed: '', eta: '', received: '', total: '' });
   const [selectedFormatIndex, setSelectedFormatIndex] = useState<number>(0);
+
+  const formatBytes = (bytes: number) => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  };
 
   const handlePaste = async () => {
     if (typeof window === 'undefined') return;
@@ -114,9 +126,51 @@ export default function Home() {
 
   const handleDownload = async (url: string, filename: string, type: string) => {
     setDownloading(type);
+    setDownloadProgress(0);
+    setDownloadMetrics({ speed: 'Iniciando...', eta: '--:--', received: '0 MB', total: '...' });
+    
     try {
       const response = await fetch(`/api/download?url=${encodeURIComponent(url)}`);
-      const blob = await response.blob();
+      if (!response.ok) throw new Error('Download failed');
+      
+      const contentLength = response.headers.get('content-length');
+      const total = contentLength ? parseInt(contentLength, 10) : 0;
+      
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error('Download stream unavailable');
+
+      const chunks = [];
+      let receivedBytes = 0;
+      const startTime = Date.now();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        chunks.push(value);
+        receivedBytes += value.length;
+
+        if (total > 0) {
+          const progress = Math.round((receivedBytes / total) * 100);
+          setDownloadProgress(progress);
+          
+          const elapsedTime = (Date.now() - startTime) / 1000;
+          const speedBytesPerSec = receivedBytes / elapsedTime;
+          const remainingBytes = total - receivedBytes;
+          const etaSeconds = speedBytesPerSec > 0 ? remainingBytes / speedBytesPerSec : 0;
+          
+          setDownloadMetrics({
+            speed: `${formatBytes(speedBytesPerSec)}/s`,
+            eta: etaSeconds < 60 ? `${Math.round(etaSeconds)}s` : `${Math.round(etaSeconds / 60)}m`,
+            received: formatBytes(receivedBytes),
+            total: formatBytes(total)
+          });
+        } else {
+          setDownloadMetrics(prev => ({ ...prev, received: formatBytes(receivedBytes) }));
+        }
+      }
+
+      const blob = new Blob(chunks, { type: response.headers.get('content-type') || 'video/mp4' });
       const downloadUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = downloadUrl;
@@ -124,12 +178,13 @@ export default function Home() {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
     } catch (err) {
       console.error('Download failed:', err);
-      // Fallback: open in new tab
       window.open(url, '_blank');
     } finally {
       setDownloading(null);
+      setDownloadProgress(0);
     }
   };
 
@@ -372,7 +427,7 @@ export default function Home() {
                                 {downloading === 'video' ? <Loader2 className="w-5 h-5 animate-spin" /> : <Video className="w-5 h-5" />}
                               </div>
                               <div className="text-left leading-tight">
-                                <span className="block text-base">{downloading === 'video' ? 'Processando...' : 'Baixar Vídeo'}</span>
+                                <span className="block text-base">{downloading === 'video' ? 'Baixando...' : 'Baixar Vídeo'}</span>
                                 {!downloading && <span className="text-[10px] font-bold uppercase opacity-40">Salvar no dispositivo</span>}
                               </div>
                             </div>
@@ -388,6 +443,48 @@ export default function Home() {
                             <ExternalLink className="w-6 h-6" />
                           </button>
                         </div>
+
+                        {/* Progress Bar UI */}
+                        <AnimatePresence>
+                          {downloading === 'video' && (
+                            <motion.div
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: 'auto' }}
+                              exit={{ opacity: 0, height: 0 }}
+                              className="overflow-hidden"
+                            >
+                              <div className="mt-4 p-5 rounded-2xl bg-white/5 border border-white/10 space-y-4">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <Activity className="w-4 h-4 text-[#fe2c55]" />
+                                    <span className="text-[11px] font-bold uppercase tracking-wider text-white/40">{downloadMetrics.speed}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <Clock className="w-4 h-4 text-[#25f4ee]" />
+                                    <span className="text-[11px] font-bold uppercase tracking-wider text-white/40">Restam {downloadMetrics.eta}</span>
+                                  </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                  <div className="flex justify-between items-end">
+                                    <span className="text-2xl font-black text-white">{downloadProgress}%</span>
+                                    <span className="text-[10px] font-bold text-white/40 uppercase mb-1">
+                                      {downloadMetrics.received} / {downloadMetrics.total}
+                                    </span>
+                                  </div>
+                                  <div className="h-3 w-full bg-white/5 rounded-full p-0.5 border border-white/5">
+                                    <motion.div 
+                                      className="h-full bg-gradient-to-r from-[#fe2c55] to-[#25f4ee] rounded-full shadow-[0_0_10px_rgba(254,44,85,0.4)]"
+                                      initial={{ width: 0 }}
+                                      animate={{ width: `${downloadProgress}%` }}
+                                      transition={{ type: 'spring', bounce: 0, duration: 0.5 }}
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </div>
                     ) : (
                       <div className="flex gap-2">
