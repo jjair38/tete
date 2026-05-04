@@ -42,6 +42,7 @@ export async function GET(request: Request) {
       url = url.split('?')[0];
     }
   }
+  const finalUrl = url;
 
   let videoUrl = '';
   let formats: any[] = [];
@@ -60,6 +61,28 @@ export async function GET(request: Request) {
   }
 
   const sources: Source[] = [
+    {
+      name: 'SSSGram Proxy',
+      url: `https://api.sssgram.com/st-tik/ins/dl?url=${encodeURIComponent(finalUrl)}`,
+      method: 'GET',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
+      },
+      parser: (data: any) => {
+        if (data.result && data.result.insItems && data.result.insItems.length > 0) {
+          const item = data.result.insItems[0];
+          return {
+            videoUrl: item.videoUrl || item.urls?.[0]?.url,
+            formats: item.urls ? item.urls.map((u: any) => ({ quality: 'HD', url: u.url })) : [{ quality: 'HD', url: item.videoUrl }],
+            cover: item.thumb,
+            title: data.result.desc || 'Instagram Video',
+            authorName: data.result.nickName || 'User',
+            musicUrl: ''
+          };
+        }
+        return null;
+      }
+    },
     {
       name: 'Cobalt',
       url: 'https://api.cobalt.tools/api/json',
@@ -101,30 +124,8 @@ export async function GET(request: Request) {
       }
     },
     {
-      name: 'SSSGram Proxy',
-      url: `https://api.sssgram.com/st-tik/ins/dl?url=${encodeURIComponent(url)}`,
-      method: 'GET',
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
-      },
-      parser: (data: any) => {
-        if (data.result && data.result.insItems && data.result.insItems.length > 0) {
-          const item = data.result.insItems[0];
-          return {
-            videoUrl: item.videoUrl || item.urls?.[0]?.url,
-            formats: item.urls ? item.urls.map((u: any) => ({ quality: 'HD', url: u.url })) : [{ quality: 'HD', url: item.videoUrl }],
-            cover: item.thumb,
-            title: data.result.desc || 'Instagram Video',
-            authorName: data.result.nickName || 'User',
-            musicUrl: ''
-          };
-        }
-        return null;
-      }
-    },
-    {
       name: 'SavePost',
-      url: `https://savepost.app/api/v1/info?url=${encodeURIComponent(url)}`,
+      url: `https://savepost.app/api/v1/info?url=${encodeURIComponent(finalUrl)}`,
       method: 'GET',
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
@@ -144,81 +145,8 @@ export async function GET(request: Request) {
       }
     },
     {
-      name: 'VKRDown',
-      url: `https://api.vkrdown.com/api/v1/get_data?url=${encodeURIComponent(url)}`,
-      method: 'GET',
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
-      },
-      parser: (data: any) => {
-        if (data.data && (data.data.url || data.data.medias)) {
-          let videoUrl = '';
-          let formats: any[] = [];
-          if (data.data.url) {
-            videoUrl = data.data.url;
-            formats.push({ quality: 'Normal', url: videoUrl });
-          }
-          if (data.data.medias && data.data.medias.length > 0) {
-            const videoMedias = data.data.medias.filter((m: any) => m.type === 'video');
-            if (videoMedias.length > 0) {
-              formats = videoMedias.map((m: any) => ({
-                quality: m.quality || 'HD',
-                url: m.url,
-                size: m.size_display || undefined
-              }));
-              
-              formats.sort((a, b) => {
-                const qA = String(a.quality).toLowerCase();
-                const qB = String(b.quality).toLowerCase();
-                if (qA.includes('4k')) return -1;
-                if (qB.includes('4k')) return 1;
-                if (qA.includes('hd') && !qB.includes('hd')) return -1;
-                if (qB.includes('hd') && !qA.includes('hd')) return 1;
-                const numA = parseInt(qA.replace(/[^0-9]/g, '')) || 0;
-                const numB = parseInt(qB.replace(/[^0-9]/g, '')) || 0;
-                return numB - numA;
-              });
-              videoUrl = formats[0].url;
-            }
-          }
-          if (videoUrl) {
-            return {
-              videoUrl,
-              formats,
-              cover: data.data.thumbnail || data.data.cover,
-              title: data.data.title,
-              authorName: data.data.author,
-              musicUrl: data.data.music_url || data.data.audio
-            };
-          }
-        }
-        return null;
-      }
-    },
-    {
       name: 'SocialDownloader',
-      url: `https://api.socialdownloader.app/instagram/v1/info?url=${encodeURIComponent(url)}`,
-      method: 'GET',
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
-      },
-      parser: (data: any) => {
-        if (data.data && data.data.video) {
-          return {
-            videoUrl: data.data.video,
-            formats: [{ quality: 'HD', url: data.data.video }],
-            cover: data.data.thumbnail,
-            title: data.data.title,
-            authorName: data.data.username,
-            musicUrl: data.data.music
-          };
-        }
-        return null;
-      }
-    },
-    {
-      name: 'TikVids',
-      url: `https://api.tikvids.com/instagram/v1/info?url=${encodeURIComponent(url)}`,
+      url: `https://api.socialdownloader.app/instagram/v1/info?url=${encodeURIComponent(finalUrl)}`,
       method: 'GET',
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
@@ -239,7 +167,7 @@ export async function GET(request: Request) {
     },
     {
       name: 'SnapInsta',
-      url: `https://api.snap-insta.com/api/get_data?url=${encodeURIComponent(url)}`,
+      url: `https://api.snap-insta.com/api/get_data?url=${encodeURIComponent(finalUrl)}`,
       method: 'GET',
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
@@ -261,7 +189,6 @@ export async function GET(request: Request) {
                 size: m.size_display || undefined
               }));
               
-              // Improved sorting
               formats.sort((a, b) => {
                 const qA = String(a.quality).toLowerCase();
                 const qB = String(b.quality).toLowerCase();
@@ -291,41 +218,70 @@ export async function GET(request: Request) {
       }
     },
     {
-      name: 'SaveTube',
-      url: `https://api.v1.savetube.me/instagram/v1/info?url=${encodeURIComponent(url)}`,
+      name: 'VKRDown',
+      url: `https://api.vkrdown.com/api/v1/get_data?url=${encodeURIComponent(finalUrl)}`,
       method: 'GET',
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
       },
       parser: (data: any) => {
-        if (data.data && data.data.video) {
-          return {
-            videoUrl: data.data.video,
-            formats: [{ quality: 'HD', url: data.data.video }],
-            cover: data.data.thumbnail,
-            title: data.data.title,
-            authorName: data.data.username,
-            musicUrl: data.data.music
-          };
+        if (data.data && (data.data.url || data.data.medias)) {
+          let videoUrl = '';
+          let formats: any[] = [];
+          if (data.data.url) {
+            videoUrl = data.data.url;
+            formats.push({ quality: 'Normal', url: videoUrl });
+          }
+          if (data.data.medias && data.data.medias.length > 0) {
+            const videoMedias = data.data.medias.filter((m: any) => m.type === 'video');
+            if (videoMedias.length > 0) {
+              formats = videoMedias.map((m: any) => ({
+                quality: m.quality || 'HD',
+                url: m.url,
+                size: m.size_display || undefined
+              }));
+              
+              formats.sort((a, b) => {
+                const qA = String(a.quality).toLowerCase();
+                const qB = String(b.quality).toLowerCase();
+                if (qA.includes('4k')) return -1;
+                if (qB.includes('4k')) return 1;
+                if (qA.includes('hd') && !qB.includes('hd')) return -1;
+                if (qB.includes('hd') && !qA.includes('hd')) return 1;
+                const numA = parseInt(qA.replace(/[^0-9]/g, '')) || 0;
+                const numB = parseInt(qB.replace(/[^0-9]/g, '')) || 0;
+                return numB - numA;
+              });
+              videoUrl = formats[0].url;
+            }
+          }
+          if (videoUrl) {
+            return {
+              videoUrl,
+              formats,
+              cover: data.data.thumbnail || data.data.cover,
+              title: data.data.title,
+              authorName: data.data.author,
+              musicUrl: data.data.music_url || data.data.audio
+            };
+          }
         }
         return null;
       }
     }
   ];
 
-  for (const source of sources) {
-    if (videoUrl) break;
+  async function fetchFromSource(source: Source) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout per source
-
       const response = await fetch(source.url, {
         method: source.method || 'GET',
         headers: source.headers || {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
         },
-        body: source.method === 'POST' && source.body ? source.body(url) : undefined,
+        body: source.method === 'POST' && source.body ? source.body(finalUrl) : undefined,
         next: { revalidate: 0 },
         signal: controller.signal
       });
@@ -333,37 +289,53 @@ export async function GET(request: Request) {
       clearTimeout(timeoutId);
       
       if (!response.ok) {
-        console.warn(`Source ${source.name} failed with status: ${response.status}`);
-        continue;
+        throw new Error(`Status ${response.status}`);
       }
       
+      const text = await response.text();
       let data;
       try {
-        const text = await response.text();
-        try {
-          data = JSON.parse(text);
-        } catch (e) {
-          console.error(`Failed to parse JSON from source ${source.name}:`, text.substring(0, 100));
-          continue;
-        }
+        data = JSON.parse(text);
       } catch (e) {
-        console.error(`Failed to read response body from source ${source.name}`);
-        continue;
+        throw new Error('Invalid JSON');
       }
 
       const parsed = source.parser(data);
-
-      if (parsed) {
-        videoUrl = parsed.videoUrl;
-        formats = parsed.formats;
-        cover = parsed.cover || cover;
-        title = parsed.title || title;
-        authorName = parsed.authorName || authorName;
-        musicUrl = parsed.musicUrl || musicUrl;
-      }
-    } catch (e) {
-      console.error(`Instagram Source failed: ${source.url}`, e);
+      if (!parsed) throw new Error('Data not found in response');
+      
+      return { ...parsed, sourceName: source.name };
+    } catch (e: any) {
+      clearTimeout(timeoutId);
+      throw new Error(`Source ${source.name} failed: ${e.message}`);
     }
+  }
+
+  // Tiered execution: Race the first 3 sources, then sequential for leftovers if none of the first 3 succeed
+  const tier1 = sources.slice(0, 3);
+  const tier2 = sources.slice(3);
+
+  let result = null;
+
+  try {
+    // Race Tier 1 sources
+    result = await Promise.any(tier1.map(s => fetchFromSource(s)));
+  } catch (e) {
+    // If Tier 1 fails, try Tier 2 sequentially (or parallel too, but let's do parallel race for all to be super fast)
+    try {
+      result = await Promise.any(tier2.map(s => fetchFromSource(s)));
+    } catch (e2) {
+      console.error('All Instagram sources failed');
+    }
+  }
+
+  if (result) {
+    videoUrl = result.videoUrl;
+    formats = result.formats;
+    cover = result.cover || cover;
+    title = result.title || title;
+    authorName = result.authorName || authorName;
+    musicUrl = result.musicUrl || musicUrl;
+    console.log(`Successfully fetched from source: ${result.sourceName}`);
   }
 
   if (!videoUrl) {
@@ -380,7 +352,7 @@ export async function GET(request: Request) {
           'Content-Type': 'application/json',
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
         },
-        body: JSON.stringify({ url, videoQuality: '1080', isAudioOnly: true }),
+        body: JSON.stringify({ url: finalUrl, videoQuality: '1080', isAudioOnly: true }),
       });
       if (audioResponse.ok) {
         const audioData = await audioResponse.json();
