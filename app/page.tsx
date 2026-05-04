@@ -184,7 +184,7 @@ export default function Home() {
     setDownloadMetrics({ speed: 'Iniciando...', eta: '--:--', received: '0 MB', total: '...' });
     
     try {
-      const response = await fetch(`/api/download?url=${encodeURIComponent(url)}`);
+      const response = await fetch(`/api/download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(filename)}`);
       if (!response.ok) throw new Error('Download failed');
       
       const contentLength = response.headers.get('content-length');

@@ -3,6 +3,8 @@ import { NextResponse } from 'next/server';
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const url = searchParams.get('url');
+  const filename = searchParams.get('filename') || `social_save_${Date.now()}.mp4`;
+  const isAudio = filename.toLowerCase().endsWith('.mp3');
 
   if (!url) {
     return NextResponse.json({ error: 'URL is required' }, { status: 400 });
@@ -27,14 +29,14 @@ export async function GET(request: Request) {
       });
     }
 
-    if (!response.ok) throw new Error(`Failed to fetch video: ${response.status}`);
+    if (!response.ok) throw new Error(`Failed to fetch file: ${response.status}`);
 
-    const contentType = response.headers.get('content-type') || 'video/mp4';
+    const contentType = response.headers.get('content-type') || (isAudio ? 'audio/mpeg' : 'video/mp4');
     const contentLength = response.headers.get('content-length');
     
     const headers: Record<string, string> = {
       'Content-Type': contentType,
-      'Content-Disposition': `attachment; filename="social_save_${Date.now()}_video.mp4"`,
+      'Content-Disposition': `attachment; filename="${filename}"`,
       'Cache-Control': 'no-cache'
     };
 

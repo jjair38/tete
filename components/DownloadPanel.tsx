@@ -208,35 +208,36 @@ export default function DownloadPanel({
         )}
         
         {/* Audio Section */}
-        {videoData.music && (
-          <div className="pt-4 border-t border-white/5">
-            <div className="flex flex-col sm:flex-row gap-2">
-              <button
-                disabled={!!downloading}
-                onClick={() => onDownload(videoData.music!, `${videoData.platform}_audio_${Date.now()}.mp3`, 'audio')}
-                className="flex-[2] py-4 px-6 rounded-2xl bg-white/5 border border-white/10 text-white font-bold flex items-center justify-between hover:bg-white/10 transition-all active:scale-[0.98] disabled:opacity-50 group"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="bg-white/5 p-2 rounded-xl group-hover:bg-white/10 transition-colors">
-                    {downloading === 'audio' ? <Loader2 className="w-5 h-5 animate-spin" /> : <Music className="w-5 h-5 group-hover:rotate-12 transition-transform" />}
-                  </div>
-                  <div className="text-left leading-tight">
-                    <span className="block">{downloading === 'audio' ? 'Baixando Áudio...' : 'Baixar Som/MP3'}</span>
-                    {!downloading && <span className="text-[9px] font-black uppercase opacity-40 tracking-widest">Apenas Áudio</span>}
-                  </div>
+        <div className="pt-4 border-t border-white/5">
+          <div className="flex flex-col sm:flex-row gap-2">
+            <button
+              disabled={!!downloading}
+              onClick={() => {
+                const audioUrl = videoData.music || (videoData.formats && videoData.formats.length > 0 ? videoData.formats[0].url : videoData.video);
+                onDownload(audioUrl, `${videoData.platform}_audio_${Date.now()}.mp3`, 'audio');
+              }}
+              className="flex-[2] py-4 px-6 rounded-2xl bg-white/5 border border-white/10 text-white font-bold flex items-center justify-between hover:bg-white/10 transition-all active:scale-[0.98] disabled:opacity-50 group"
+            >
+              <div className="flex items-center gap-4">
+                <div className="bg-white/5 p-2 rounded-xl group-hover:bg-white/10 transition-colors">
+                  {downloading === 'audio' ? <Loader2 className="w-5 h-5 animate-spin" /> : <Music className="w-5 h-5 group-hover:rotate-12 transition-transform" />}
                 </div>
-              </button>
-              <button 
-                onClick={() => onOpenDirectly(videoData.music!)}
-                title="Abrir link original"
-                className="flex-1 py-5 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all active:scale-95 flex items-center justify-center text-white/30 hover:text-white gap-2"
-              >
-                <ExternalLink className="w-5 h-5" />
-                <span className="sm:hidden font-bold">Áudio</span>
-              </button>
-            </div>
+                <div className="text-left leading-tight">
+                  <span className="block">{downloading === 'audio' ? 'Baixando Áudio...' : 'Baixar Som / MP3'}</span>
+                  {!downloading && <span className="text-[9px] font-black uppercase opacity-40 tracking-widest">Extrair Áudio do Vídeo</span>}
+                </div>
+              </div>
+            </button>
+            <button 
+              onClick={() => onOpenDirectly(videoData.music || (videoData.formats && videoData.formats.length > 0 ? videoData.formats[0].url : videoData.video))}
+              title="Abrir link original"
+              className="flex-1 py-5 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all active:scale-95 flex items-center justify-center text-white/30 hover:text-white gap-2"
+            >
+              <ExternalLink className="w-5 h-5" />
+              <span className="sm:hidden font-bold">Áudio</span>
+            </button>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
