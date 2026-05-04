@@ -2,10 +2,29 @@ import { NextResponse } from 'next/server';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const url = searchParams.get('url');
+  let url = searchParams.get('url');
 
   if (!url) {
     return NextResponse.json({ error: 'URL is required' }, { status: 400 });
+  }
+
+  // Ensure URL has protocol
+  if (url && !url.startsWith('http')) {
+    url = 'https://' + url;
+  }
+
+  // Clean URL - remove unnecessary tracking params but keep the URL intact
+  if (url && url.includes('?')) {
+    try {
+      const urlObj = new URL(url);
+      if (urlObj.pathname.includes('/reel/') || urlObj.pathname.includes('/p/') || urlObj.pathname.includes('/reels/')) {
+        url = urlObj.origin + urlObj.pathname;
+        if (!url.endsWith('/')) url += '/';
+      }
+    } catch (e) {
+      // Fallback to simple split if URL parsing fails
+      url = url.split('?')[0];
+    }
   }
 
   let videoUrl = '';
@@ -15,9 +34,63 @@ export async function GET(request: Request) {
   let title = 'Vídeo do Instagram';
   let authorName = 'Instagram User';
 
-  const sources = [
+  interface Source {
+    name: string;
+    url: string;
+    method: string;
+    headers?: Record<string, string>;
+    body?: (url: string) => string;
+    parser: (data: any) => any;
+  }
+
+  const sources: Source[] = [
     {
+      name: 'Cobalt',
+      url: 'https://api.cobalt.tools/api/json',
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
+      },
+      body: (url: string) => JSON.stringify({ url, videoQuality: '1080' }),
+      parser: (data: any) => {
+        if (['stream', 'redirect', 'tunnel'].includes(data.status) && data.url) {
+          return {
+            videoUrl: data.url,
+            formats: [{ quality: 'HD', url: data.url }],
+            cover: '',
+            title: 'Instagram Video',
+            authorName: 'Instagram User',
+            musicUrl: ''
+          };
+        }
+        if (data.status === 'picker' && data.picker && data.picker.length > 0) {
+          const video = data.picker.find((item: any) => item.type === 'video');
+          if (video) {
+            return {
+              videoUrl: video.url,
+              formats: data.picker.filter((p: any) => p.type === 'video').map((v: any) => ({
+                quality: v.quality || 'HD',
+                url: v.url
+              })),
+              cover: '',
+              title: 'Instagram Video',
+              authorName: 'Instagram User',
+              musicUrl: ''
+            };
+          }
+        }
+        return null;
+      }
+    },
+    {
+      name: 'VKRDown',
       url: `https://api.vkrdown.com/api/v1/get_data?url=${encodeURIComponent(url)}`,
+      method: 'GET',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
+      },
       parser: (data: any) => {
         if (data.data && (data.data.url || data.data.medias)) {
           let videoUrl = '';
@@ -65,7 +138,12 @@ export async function GET(request: Request) {
       }
     },
     {
+      name: 'SocialDownloader',
       url: `https://api.socialdownloader.app/instagram/v1/info?url=${encodeURIComponent(url)}`,
+      method: 'GET',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
+      },
       parser: (data: any) => {
         if (data.data && data.data.video) {
           return {
@@ -81,7 +159,12 @@ export async function GET(request: Request) {
       }
     },
     {
+      name: 'TikVids',
       url: `https://api.tikvids.com/instagram/v1/info?url=${encodeURIComponent(url)}`,
+      method: 'GET',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
+      },
       parser: (data: any) => {
         if (data.data && data.data.video) {
           return {
@@ -97,7 +180,12 @@ export async function GET(request: Request) {
       }
     },
     {
+      name: 'SnapInsta',
       url: `https://api.snap-insta.com/api/get_data?url=${encodeURIComponent(url)}`,
+      method: 'GET',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
+      },
       parser: (data: any) => {
         if (data.data && (data.data.url || data.data.medias)) {
           let videoUrl = '';
@@ -145,7 +233,12 @@ export async function GET(request: Request) {
       }
     },
     {
+      name: 'SaveTube',
       url: `https://api.v1.savetube.me/instagram/v1/info?url=${encodeURIComponent(url)}`,
+      method: 'GET',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
+      },
       parser: (data: any) => {
         if (data.data && data.data.video) {
           return {
@@ -166,16 +259,40 @@ export async function GET(request: Request) {
     if (videoUrl) break;
 
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout per source
+
       const response = await fetch(source.url, {
-        headers: {
+        method: source.method || 'GET',
+        headers: source.headers || {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
         },
-        next: { revalidate: 0 }
+        body: source.method === 'POST' && source.body ? source.body(url) : undefined,
+        next: { revalidate: 0 },
+        signal: controller.signal
       });
       
-      if (!response.ok) continue;
+      clearTimeout(timeoutId);
       
-      const data = await response.json();
+      if (!response.ok) {
+        console.warn(`Source ${source.name} failed with status: ${response.status}`);
+        continue;
+      }
+      
+      let data;
+      try {
+        const text = await response.text();
+        try {
+          data = JSON.parse(text);
+        } catch (e) {
+          console.error(`Failed to parse JSON from source ${source.name}:`, text.substring(0, 100));
+          continue;
+        }
+      } catch (e) {
+        console.error(`Failed to read response body from source ${source.name}`);
+        continue;
+      }
+
       const parsed = source.parser(data);
 
       if (parsed) {

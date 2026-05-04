@@ -9,8 +9,25 @@ export async function GET(request: Request) {
   }
 
   try {
-    const response = await fetch(url);
-    if (!response.ok) throw new Error('Failed to fetch video');
+    let response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+      },
+      redirect: 'follow'
+    });
+
+    // If forbidden, try with Instagram referer
+    if (response.status === 403) {
+      response = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+          'Referer': 'https://www.instagram.com/',
+        },
+        redirect: 'follow'
+      });
+    }
+
+    if (!response.ok) throw new Error(`Failed to fetch video: ${response.status}`);
 
     const contentType = response.headers.get('content-type') || 'video/mp4';
     const contentLength = response.headers.get('content-length');

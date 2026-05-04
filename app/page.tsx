@@ -147,8 +147,8 @@ export default function Home() {
     setVideoData(null);
 
     try {
-      const isInstagram = url.includes('instagram.com');
-      const isTikTok = url.includes('tiktok.com');
+      const isInstagram = /instagram\.com|instagr\.am/.test(url);
+      const isTikTok = /tiktok\.com/.test(url);
 
       if (!isInstagram && !isTikTok) {
         throw new Error('Por favor, insira um link válido do TikTok ou Instagram.');
