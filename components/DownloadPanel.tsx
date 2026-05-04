@@ -99,34 +99,50 @@ export default function DownloadPanel({
                 )}
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {videoData.formats.map((format, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setSelectedFormatIndex(idx)}
-                    className={`relative group/btn py-3 px-2 rounded-2xl text-xs font-black transition-all border overflow-hidden ${
-                      selectedFormatIndex === idx 
-                        ? 'bg-[#25f4ee] text-black border-[#25f4ee] shadow-[0_0_20px_rgba(37,244,238,0.2)]' 
-                        : 'bg-white/5 text-white/60 border-white/10 hover:border-white/30 hover:bg-white/10'
-                    }`}
-                  >
-                    <div className="relative z-10">
-                      {format.quality}
-                      {format.size && (
-                        <span className={`block text-[9px] font-bold mt-0.5 ${
-                          selectedFormatIndex === idx ? 'opacity-70' : 'opacity-40'
-                        }`}>
-                          {format.size}
-                        </span>
+                {videoData.formats.map((format, idx) => {
+                  const isHD = format.quality.toLowerCase().includes('hd') || 
+                               format.quality.includes('1080') || 
+                               format.quality.includes('2k') || 
+                               format.quality.includes('4k');
+                  
+                  return (
+                    <button
+                      key={idx}
+                      onClick={() => setSelectedFormatIndex(idx)}
+                      className={`relative group/btn py-3 px-2 rounded-2xl text-xs font-black transition-all border overflow-hidden ${
+                        selectedFormatIndex === idx 
+                          ? 'bg-[#25f4ee] text-black border-[#25f4ee] shadow-[0_0_20px_rgba(37,244,238,0.2)]' 
+                          : 'bg-white/5 text-white/60 border-white/10 hover:border-white/30 hover:bg-white/10'
+                      }`}
+                    >
+                      <div className="relative z-10 flex flex-col items-center">
+                        <div className="flex items-center gap-1 group-hover/btn:scale-110 transition-transform">
+                          {format.quality}
+                          {isHD && (
+                            <span className={`text-[8px] px-1 rounded-sm ${
+                              selectedFormatIndex === idx ? 'bg-black/20' : 'bg-[#25f4ee]/20 text-[#25f4ee]'
+                            }`}>
+                              HD
+                            </span>
+                          )}
+                        </div>
+                        {format.size && (
+                          <span className={`block text-[9px] font-bold mt-0.5 ${
+                            selectedFormatIndex === idx ? 'opacity-70' : 'opacity-40'
+                          }`}>
+                            {format.size}
+                          </span>
+                        )}
+                      </div>
+                      {selectedFormatIndex === idx && (
+                        <motion.div 
+                          layoutId="active-quality"
+                          className="absolute inset-0 bg-white/20 mix-blend-overlay"
+                        />
                       )}
-                    </div>
-                    {selectedFormatIndex === idx && (
-                      <motion.div 
-                        layoutId="active-quality"
-                        className="absolute inset-0 bg-white/20 mix-blend-overlay"
-                      />
-                    )}
-                  </button>
-                ))}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -138,19 +154,34 @@ export default function DownloadPanel({
                   const format = videoData.formats![selectedFormatIndex];
                   onDownload(format.url, `${videoData.platform}_${format.quality}_${Date.now()}.mp4`, 'video');
                 }}
-                className="flex-[2] py-5 px-6 rounded-2xl bg-white text-black font-black flex items-center justify-between hover:bg-[#fe2c55] hover:text-white transition-all active:scale-[0.98] disabled:opacity-50 group shadow-2xl shadow-black/40"
+                className={`flex-[2] py-5 px-6 rounded-2xl font-black flex items-center justify-between transition-all active:scale-[0.98] disabled:opacity-50 group shadow-2xl shadow-black/40 ${
+                  videoData.formats[selectedFormatIndex].quality.toLowerCase().includes('hd') || videoData.formats[selectedFormatIndex].quality.includes('1080')
+                    ? 'bg-[#25f4ee] text-black hover:bg-white'
+                    : 'bg-white text-black hover:bg-[#fe2c55] hover:text-white'
+                }`}
               >
                 <div className="flex items-center gap-4">
-                  <div className="bg-black/5 p-2.5 rounded-xl group-hover:bg-white/20 transition-colors">
+                  <div className="bg-black/5 p-2.5 rounded-xl group-hover:bg-black/10 transition-colors">
                     {downloading === 'video' ? <Loader2 className="w-5 h-5 animate-spin" /> : <Video className="w-5 h-5" />}
                   </div>
                   <div className="text-left leading-tight">
                     <span className="block text-base tracking-tight">{downloading === 'video' ? 'Baixando...' : 'Baixar Vídeo'}</span>
-                    {!downloading && <span className="text-[10px] font-bold uppercase opacity-40">Salvar MP4</span>}
+                    {!downloading && (
+                      <span className="text-[10px] font-bold uppercase opacity-40">
+                        {videoData.formats[selectedFormatIndex].quality.toLowerCase().includes('hd') || videoData.formats[selectedFormatIndex].quality.includes('1080') 
+                          ? 'Qualidade Máxima' 
+                          : 'Salvar MP4'}
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="flex flex-col items-end">
-                  <span className="text-xs font-black uppercase tracking-widest">{videoData.formats[selectedFormatIndex].quality}</span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs font-black uppercase tracking-widest">{videoData.formats[selectedFormatIndex].quality}</span>
+                    {(videoData.formats[selectedFormatIndex].quality.toLowerCase().includes('hd') || videoData.formats[selectedFormatIndex].quality.includes('1080')) && (
+                      <Zap className="w-3 h-3 fill-current animate-pulse text-black/40" />
+                    )}
+                  </div>
                 </div>
               </button>
               
