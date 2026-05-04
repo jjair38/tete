@@ -119,7 +119,7 @@ export default function OnlineCounter() {
             activeCities.add(data.city);
           }
         });
-        setCities(Array.from(activeCities).slice(0, 3)); // Show up to 3 cities
+        setCities(Array.from(activeCities).slice(0, 10)); // Show up to 10 cities
       }, (error) => {
         handleFirestoreError(error, 'list', 'presence');
       });
@@ -152,7 +152,7 @@ export default function OnlineCounter() {
           {onlineCount} Online Agora
         </span>
         {cities.length > 0 && (
-          <span className="text-[9px] opacity-70 font-medium normal-case leading-tight truncate max-w-[150px]">
+          <span className="text-[9px] opacity-70 font-medium normal-case leading-tight">
             {cities.join(', ')}
             {onlineCount > cities.length && '...'}
           </span>
