@@ -311,26 +311,48 @@ export default function Home() {
                     Opções de Download
                   </h3>
                   
-                  <div className="space-y-4">
+                  <div className="space-y-6">
                     {videoData.formats && videoData.formats.length > 0 ? (
-                      <div className="space-y-4">
-                        <div className="flex flex-col gap-2">
-                          <label className="text-[10px] font-bold uppercase tracking-widest text-white/40 ml-1">
-                            Selecione a Qualidade
-                          </label>
+                      <div className="space-y-6">
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between px-1">
+                            <label className="text-[10px] font-bold uppercase tracking-widest text-white/40">
+                              Escolha a Qualidade
+                            </label>
+                            {videoData.formats[selectedFormatIndex].quality.toLowerCase().includes('hd') && (
+                              <span className="flex items-center gap-1 text-[10px] font-black text-[#25f4ee] uppercase tracking-tighter">
+                                <Zap className="w-3 h-3 fill-current" />
+                                Alta Resolução
+                              </span>
+                            )}
+                          </div>
                           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                             {videoData.formats.map((format, idx) => (
                               <button
                                 key={idx}
                                 onClick={() => setSelectedFormatIndex(idx)}
-                                className={`py-3 px-2 rounded-xl text-xs font-bold transition-all border ${
+                                className={`relative group/btn py-3 px-2 rounded-xl text-xs font-bold transition-all border overflow-hidden ${
                                   selectedFormatIndex === idx 
-                                    ? 'bg-[#25f4ee] text-black border-[#25f4ee]' 
-                                    : 'bg-white/5 text-white/60 border-white/10 hover:border-white/30'
+                                    ? 'bg-[#25f4ee] text-black border-[#25f4ee] shadow-[0_0_20px_rgba(37,244,238,0.3)]' 
+                                    : 'bg-white/5 text-white/60 border-white/10 hover:border-white/30 hover:bg-white/10'
                                 }`}
                               >
-                                {format.quality}
-                                {format.size && <span className="block opacity-60 text-[9px] font-medium">{format.size}</span>}
+                                <div className="relative z-10">
+                                  {format.quality}
+                                  {format.size && (
+                                    <span className={`block text-[9px] font-medium mt-0.5 ${
+                                      selectedFormatIndex === idx ? 'opacity-70' : 'opacity-40'
+                                    }`}>
+                                      {format.size}
+                                    </span>
+                                  )}
+                                </div>
+                                {selectedFormatIndex === idx && (
+                                  <motion.div 
+                                    layoutId="active-quality"
+                                    className="absolute inset-0 bg-white/20 mix-blend-overlay"
+                                  />
+                                )}
                               </button>
                             ))}
                           </div>
@@ -343,22 +365,27 @@ export default function Home() {
                               const format = videoData.formats![selectedFormatIndex];
                               handleDownload(format.url, `${videoData.platform}_${format.quality}_${Date.now()}.mp4`, 'video');
                             }}
-                            className="flex-1 py-4 px-6 rounded-2xl bg-white text-black font-bold flex items-center justify-between hover:bg-[#25f4ee] hover:text-black transition-all active:scale-[0.98] disabled:opacity-50 group shadow-xl shadow-black/20"
+                            className="flex-1 py-5 px-6 rounded-2xl bg-white text-black font-black flex items-center justify-between hover:bg-[#fe2c55] hover:text-white transition-all active:scale-[0.98] disabled:opacity-50 group shadow-2xl shadow-black/40"
                           >
-                            <div className="flex items-center gap-3">
-                              {downloading === 'video' ? <Loader2 className="w-5 h-5 animate-spin" /> : <Video className="w-5 h-5 group-hover:animate-bounce" />}
-                              <span>{downloading === 'video' ? 'Baixando...' : 'Baixar Vídeo'}</span>
+                            <div className="flex items-center gap-4">
+                              <div className="bg-black/5 p-2 rounded-lg group-hover:bg-white/20 transition-colors">
+                                {downloading === 'video' ? <Loader2 className="w-5 h-5 animate-spin" /> : <Video className="w-5 h-5" />}
+                              </div>
+                              <div className="text-left leading-tight">
+                                <span className="block text-base">{downloading === 'video' ? 'Processando...' : 'Baixar Vídeo'}</span>
+                                {!downloading && <span className="text-[10px] font-bold uppercase opacity-40">Salvar no dispositivo</span>}
+                              </div>
                             </div>
                             <div className="flex flex-col items-end">
-                              <span className="text-[10px] uppercase tracking-widest opacity-50">{videoData.formats[selectedFormatIndex].quality}</span>
+                              <span className="text-xs font-black uppercase tracking-widest">{videoData.formats[selectedFormatIndex].quality}</span>
                             </div>
                           </button>
                           <button 
                             onClick={() => openDirectly(videoData.formats![selectedFormatIndex].url)}
-                            title="Abrir link original"
-                            className="px-4 rounded-2xl bg-white/10 hover:bg-white/20 transition-all active:scale-95"
+                            title="Ver link direto"
+                            className="px-5 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/20 transition-all active:scale-95 flex items-center justify-center text-white/40 hover:text-white"
                           >
-                            <ExternalLink className="w-5 h-5 text-white/60" />
+                            <ExternalLink className="w-6 h-6" />
                           </button>
                         </div>
                       </div>

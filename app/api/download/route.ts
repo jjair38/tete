@@ -10,13 +10,15 @@ export async function GET(request: Request) {
 
   try {
     const response = await fetch(url);
-    const contentType = response.headers.get('content-type') || 'video/mp4';
-    const blob = await response.blob();
+    if (!response.ok) throw new Error('Failed to fetch video');
 
-    return new Response(blob, {
+    const contentType = response.headers.get('content-type') || 'video/mp4';
+    
+    return new Response(response.body, {
       headers: {
         'Content-Type': contentType,
-        'Content-Disposition': `attachment; filename="video_${Date.now()}.mp4"`,
+        'Content-Disposition': `attachment; filename="social_save_${Date.now()}_video.mp4"`,
+        'Cache-Control': 'no-cache'
       },
     });
   } catch (error) {
