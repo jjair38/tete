@@ -8,8 +8,16 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Social Video Downloader",
-  description: "Download TikTok and Instagram videos easily",
+  title: "Social Save | Baixar Vídeo do TikTok e Instagram Sem Marca d'Água",
+  description: "O melhor downloader gratuito para vídeos do TikTok e Instagram. Baixe vídeos em HD sem marca d'água de forma rápida e segura.",
+  keywords: ["baixar video tiktok", "download instagram reels", "sem marca d'agua", "tiktok downloader", "instagram saver"],
+  authors: [{ name: "Social Save Team" }],
+  openGraph: {
+    title: "Social Save - Downloader Profissional",
+    description: "Baixe vídeos do TikTok e Instagram em segundos.",
+    type: "website",
+    locale: "pt_BR",
+  }
 };
 
 export default function RootLayout({
