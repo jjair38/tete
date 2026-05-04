@@ -36,10 +36,17 @@ service cloud.firestore {
       allow read: if true;
       
       // Allow heartbeat updates
-      allow create, update: if 
+      allow create: if 
         sessionId.size() >= 10 && sessionId.size() <= 128 &&
         incoming().lastSeen == request.time &&
-        incoming().keys().hasOnly(['lastSeen']);
+        incoming().keys().hasOnly(['lastSeen', 'city']) &&
+        incoming().city is string && incoming().city.size() <= 100;
+
+      allow update: if 
+        sessionId.size() >= 10 && sessionId.size() <= 128 &&
+        incoming().lastSeen == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['lastSeen', 'city']) &&
+        incoming().city is string && incoming().city.size() <= 100;
       
       // Allow session cleanup
       allow delete: if true;

@@ -20,11 +20,22 @@ export async function GET(request: Request) {
       url = url.replace('instagr.am/', 'instagram.com/');
       const urlObj = new URL(url);
       
+      // Normalize to www.instagram.com
+      if (urlObj.hostname === 'instagram.com') {
+        urlObj.hostname = 'www.instagram.com';
+      }
+
       // Keep only the essential part of the path for reels and posts
-      if (urlObj.pathname.includes('/reel/') || urlObj.pathname.includes('/p/') || urlObj.pathname.includes('/reels/')) {
+      const pathParts = urlObj.pathname.split('/').filter(Boolean);
+      if (pathParts.length >= 2 && ['reel', 'p', 'reels', 'tv'].includes(pathParts[0])) {
+        const shortcode = pathParts[1];
+        // Standardize to /p/ for broadest compatibility across all APIs
+        url = `${urlObj.origin}/p/${shortcode}/`;
+      } else if (urlObj.pathname.includes('/reels/')) {
+        // Handle cases where reels might be deeper in path
         const matches = urlObj.pathname.match(/\/(?:reel|p|reels)\/([A-Za-z0-9_-]+)/);
         if (matches && matches[1]) {
-          url = `${urlObj.origin}/${urlObj.pathname.split('/')[1]}/${matches[1]}/`;
+          url = `${urlObj.origin}/p/${matches[1]}/`;
         }
       }
     } catch (e) {
@@ -105,6 +116,27 @@ export async function GET(request: Request) {
             cover: item.thumb,
             title: data.result.desc || 'Instagram Video',
             authorName: data.result.nickName || 'User',
+            musicUrl: ''
+          };
+        }
+        return null;
+      }
+    },
+    {
+      name: 'SavePost',
+      url: `https://savepost.app/api/v1/info?url=${encodeURIComponent(url)}`,
+      method: 'GET',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
+      },
+      parser: (data: any) => {
+        if (data.data && data.data.video_url) {
+          return {
+            videoUrl: data.data.video_url,
+            formats: [{ quality: 'HD', url: data.data.video_url }],
+            cover: data.data.thumbnail_url,
+            title: data.data.caption || 'Instagram Reel',
+            authorName: data.data.username || 'User',
             musicUrl: ''
           };
         }

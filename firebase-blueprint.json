@@ -26,6 +26,10 @@
           "type": "string",
           "format": "date-time",
           "description": "Last time the user's session was active"
+        },
+        "city": {
+          "type": "string",
+          "description": "City from where the user is accessing"
         }
       },
       "required": ["lastSeen"]
