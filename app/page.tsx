@@ -10,6 +10,7 @@ import {
   AlertCircle,
   ClipboardPaste,
   X,
+  Share2
 } from 'lucide-react';
 import AdBanner from '@/components/AdBanner';
 import AccessCounter from '@/components/AccessCounter';
@@ -19,16 +20,7 @@ import VideoInfoCard from '@/components/VideoInfoCard';
 import DownloadPanel from '@/components/DownloadPanel';
 import FeaturesGrid from '@/components/FeaturesGrid';
 import { formatBytes } from '@/lib/utils';
-import RecentDownloads from '@/components/RecentDownloads';
-
-interface HistoryItem {
-  id: string;
-  title: string;
-  cover: string;
-  timestamp: number;
-  platform: string;
-  url: string;
-}
+import RecentDownloads, { type HistoryItem } from '@/components/RecentDownloads';
 
 interface VideoFormat {
   quality: string;
@@ -100,6 +92,23 @@ export default function Home() {
       const searchBtn = document.getElementById('search-button');
       searchBtn?.click();
     }, 100);
+  };
+
+  const handleShareApp = async () => {
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Social Save - Downloader de Vídeos',
+          text: 'Baixe vídeos do TikTok e Instagram sem marca d\'água em segundos!',
+          url: window.location.href,
+        });
+      } catch (err) {
+        console.error('Error sharing:', err);
+      }
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+      alert('Link do app copiado!');
+    }
   };
 
   const handlePaste = async () => {
@@ -261,6 +270,13 @@ export default function Home() {
             <div className="flex flex-wrap justify-center gap-3">
               <AccessCounter />
               <OnlineCounter />
+              <button 
+                onClick={handleShareApp}
+                className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-colors text-xs font-medium tracking-wider uppercase text-white/70"
+              >
+                <Share2 className="w-3 h-3" />
+                Compartilhar
+              </button>
             </div>
           </motion.div>
           
@@ -397,20 +413,34 @@ export default function Home() {
 
         {/* Info Paragraphs */}
         <section className="space-y-12 text-white/40 max-w-2xl mx-auto text-sm leading-relaxed text-center px-4">
-          <p>
-            Nossa plataforma oferece a maneira mais simples de baixar seus vídeos favoritos do TikTok e Instagram. 
-            Basta copiar o link da postagem, colar em nossa barra de busca e selecionar a qualidade desejada.
-          </p>
-          <div className="flex flex-wrap justify-center gap-x-8 gap-y-4 py-8 border-t border-white/5">
+          <div className="space-y-4">
+            <h4 className="text-white/60 font-black uppercase tracking-[0.2em] text-[10px]">Sobre o Social Save</h4>
+            <p>
+              O Social Save é a ferramenta definitiva para criadores de conteúdo que precisam baixar vídeos do TikTok e Instagram de forma rápida, segura e com a máxima qualidade possível, sem marcas d'água irritantes.
+            </p>
+          </div>
+          <div className="flex flex-wrap justify-center gap-x-8 gap-y-4 py-8 border-t border-white/5 font-black uppercase text-[10px] tracking-widest">
             <span className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-[#25f4ee]" /> No Captcha</span>
             <span className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-[#25f4ee]" /> MP4 & MP3</span>
             <span className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-[#25f4ee]" /> HD Quality</span>
           </div>
         </section>
 
-        <footer className="mt-16 pt-8 border-t border-white/5 text-center text-white/20 text-xs font-bold uppercase tracking-widest flex flex-col gap-2">
-           <div>&copy; {new Date().getFullYear()} Social Save Downloader</div>
-           <div className="normal-case opacity-60">Tenha seu próprio site / APP &bull; Entre em contato: 11-91692-2835</div>
+        <footer className="mt-16 pt-12 border-t border-white/5 flex flex-col items-center gap-8 pb-12">
+          <div className="flex items-center gap-8 text-[10px] font-black uppercase tracking-widest text-white/20">
+            <span className="hover:text-white transition-colors cursor-pointer">Termos de Uso</span>
+            <span className="hover:text-white transition-colors cursor-pointer">Privacidade</span>
+            <span className="hover:text-white transition-colors cursor-pointer">Segurança</span>
+          </div>
+          
+          <div className="text-center space-y-2">
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30">
+              © {new Date().getFullYear()} Social Save Downloader
+            </p>
+            <p className="text-[9px] font-bold text-white/10 uppercase tracking-widest">
+              Tenha seu próprio site / APP &bull; Contato: 11-91692-2835
+            </p>
+          </div>
         </footer>
       </div>
       <WhatsAppButton />

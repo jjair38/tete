@@ -5,12 +5,13 @@ import { motion, AnimatePresence } from 'motion/react';
 import { History, ExternalLink, Video } from 'lucide-react';
 import Image from 'next/image';
 
-interface HistoryItem {
+export interface HistoryItem {
   id: string;
   title: string;
   cover: string;
   timestamp: number;
   platform: string;
+  url: string;
 }
 
 interface RecentDownloadsProps {
